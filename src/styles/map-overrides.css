@@ -1,0 +1,37 @@
+/* Global overrides to ensure app modals overlay Leaflet map reliably */
+
+/* Keep Leaflet internals below regular app overlays */
+.leaflet-container,
+.leaflet-pane,
+.leaflet-map-pane,
+.leaflet-tile-pane,
+.leaflet-overlay-pane,
+.leaflet-shadow-pane,
+.leaflet-marker-pane,
+.leaflet-tooltip-pane,
+.leaflet-popup-pane,
+.leaflet-control,
+.leaflet-control-container,
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 0 !important;
+}
+
+/* When a modal is open, completely disable map hit-testing and enforce low z-index */
+html.modal-open .leaflet-container,
+html.modal-open .leaflet-pane,
+html.modal-open .leaflet-map-pane,
+html.modal-open .leaflet-tile-pane,
+html.modal-open .leaflet-overlay-pane,
+html.modal-open .leaflet-shadow-pane,
+html.modal-open .leaflet-marker-pane,
+html.modal-open .leaflet-tooltip-pane,
+html.modal-open .leaflet-popup-pane,
+html.modal-open .leaflet-control,
+html.modal-open .leaflet-control-container,
+html.modal-open .leaflet-top,
+html.modal-open .leaflet-bottom,
+html.modal-open .leaflet-control-container * {
+  z-index: 0 !important;
+  pointer-events: none !important;
+}

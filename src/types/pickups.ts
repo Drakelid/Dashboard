@@ -11,4 +11,6 @@ export interface NewPickupRequest {
   volumeL: number
   feeKr: number
   expiresInSeconds: number
+  // Optional: delivery identifier, when known
+  deliveryId?: number
 }

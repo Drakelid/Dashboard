@@ -1,12 +1,12 @@
 <template>
   <teleport to="body">
-    <div v-if="modelValue" class="fixed inset-0 z-50">
+    <div v-if="modelValue" class="fixed inset-0 z-[2147483647]">
       <!-- Backdrop -->
-      <div class="absolute inset-0 bg-black/40" @click="onClose" />
+      <div class="absolute inset-0 bg-black/40 z-[2147483646]" @click="onClose" />
 
       <!-- Modal -->
-      <div class="absolute inset-0 flex items-center justify-center p-4">
-        <section class="w-[380px] max-w-full rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 overflow-hidden">
+      <div class="absolute inset-0 flex items-center justify-center p-4 z-[2147483647]">
+        <section class="w-[380px] max-w-full rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 overflow-hidden z-[2147483647]">
           <!-- Header -->
           <header class="relative px-4 pt-4 pb-3">
             <div class="flex items-start justify-between">
@@ -26,6 +26,9 @@
               </div>
             </div>
             <p class="text-xs text-gray-500 mt-1">A new delivery opportunity is available in your area</p>
+            <div v-if="deliveryId != null" class="mt-1 text-xs text-gray-700">
+              Delivery <span class="font-semibold">#{{ deliveryId }}</span>
+            </div>
           </header>
 
           <!-- Body -->
@@ -67,8 +70,42 @@
               </div>
             </div>
 
-            <!-- Package Details -->
-            <div class="border rounded-lg p-3 grid grid-cols-[1fr,90px] gap-4 items-center bg-gray-50">
+            <!-- Package Details (real packages if provided, else fallback preview) -->
+            <div v-if="packages && packages.length" class="border rounded-lg p-3 bg-gray-50">
+              <div class="font-semibold text-sm mb-2">Packages ({{ packages.length }})</div>
+              <ul class="space-y-2">
+                <li v-for="p in packages" :key="p.id" class="text-xs grid md:grid-cols-[1fr,auto] items-start gap-2">
+                  <div>
+                    <div class="font-medium text-gray-800">#{{ p.id }}<span v-if="p.description" class="text-gray-500"> — {{ p.description }}</span></div>
+                    <div class="mt-1 flex flex-wrap gap-2">
+                      <span v-if="p.weight != null" class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-gray-100 text-gray-700">
+                        <span class="font-medium">Weight:</span>
+                        <span>{{ p.weight }}{{ p.weight_unit || '' }}</span>
+                      </span>
+                      <span v-if="p.length != null && p.width != null && p.height != null" class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-gray-100 text-gray-700">
+                        <span class="font-medium">Size:</span>
+                        <span>{{ p.length }} × {{ p.width }} × {{ p.height }} {{ p.dimension_unit || '' }}</span>
+                      </span>
+                      <span v-if="p.fragile" class="inline-flex items-center px-2 py-0.5 rounded bg-amber-100 text-amber-800">Fragile</span>
+                      <span v-if="p.hazardous" class="inline-flex items-center px-2 py-0.5 rounded bg-red-100 text-red-800">Hazardous</span>
+                      <span v-if="p.temperature_range || p.temperature_unit" class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-50 text-blue-700">
+                        <span class="font-medium">Temp:</span>
+                        <span>{{ p.temperature_range || '' }} {{ p.temperature_unit || '' }}</span>
+                      </span>
+                      <span v-if="p.volume != null" class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-purple-50 text-purple-700">
+                        <span class="font-medium">Vol:</span>
+                        <span>{{ p.volume }}</span>
+                      </span>
+                      <span v-if="p.delivery_status" class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-green-50 text-green-700">
+                        <span class="font-medium">Status:</span>
+                        <span>{{ p.delivery_status }}</span>
+                      </span>
+                    </div>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div v-else class="border rounded-lg p-3 grid grid-cols-[1fr,90px] gap-4 items-center bg-gray-50">
               <div class="space-y-0.5">
                 <div class="font-semibold text-sm">Package Details</div>
                 <div class="text-xs text-gray-600">{{ request.dimensions }}</div>
@@ -112,7 +149,11 @@
               <X class="w-3.5 h-3.5" />
               <span>Decline</span>
             </button>
-            <button class="h-10 px-4 rounded-lg bg-green-600 text-white hover:bg-green-700 flex-1 disabled:opacity-60 flex items-center justify-center gap-1.5 font-medium" :disabled="expired" @click="onAccept">
+            <button v-if="deliveryId != null && (packages?.length || 0) > 0" class="h-10 px-4 rounded-lg bg-green-600 text-white hover:bg-green-700 flex-1 disabled:opacity-60 flex items-center justify-center gap-1.5 font-medium" :disabled="expired" @click="onAcceptAll">
+              <Check class="w-3.5 h-3.5" />
+              <span>Accept all</span>
+            </button>
+            <button class="h-10 px-4 rounded-lg border bg-white text-gray-800 hover:bg-gray-50 flex-1 disabled:opacity-60 flex items-center justify-center gap-1.5 font-medium" :disabled="expired" @click="onAccept">
               <Check class="w-3.5 h-3.5" />
               <span>Accept</span>
             </button>
@@ -132,6 +173,23 @@ import type { NewPickupRequest } from '@/types/pickups'
 const props = defineProps<{
   modelValue: boolean
   request: NewPickupRequest
+  deliveryId?: number
+  packages?: Array<{
+    id: number
+    description?: string
+    weight?: string | number
+    weight_unit?: string
+    length?: string | number
+    width?: string | number
+    height?: string | number
+    dimension_unit?: string
+    fragile?: boolean
+    hazardous?: boolean
+    temperature_range?: string
+    temperature_unit?: string
+    volume?: string | number
+    delivery_status?: string
+  }>
 }>()
 
 const emit = defineEmits<{
@@ -139,6 +197,7 @@ const emit = defineEmits<{
   (e: 'accept', request: NewPickupRequest): void
   (e: 'decline', request: NewPickupRequest): void
   (e: 'expired', request: NewPickupRequest): void
+  (e: 'accept-all', deliveryId: number): void
   (e: 'close'): void
 }>()
 
@@ -182,13 +241,21 @@ function stopTimer() {
 watch(
   () => props.modelValue,
   (v) => {
-    if (v) startTimer(props.request.expiresInSeconds)
-    else stopTimer()
+    if (v) {
+      startTimer(props.request.expiresInSeconds)
+      try { document.documentElement.classList.add('modal-open') } catch {}
+    } else {
+      stopTimer()
+      try { document.documentElement.classList.remove('modal-open') } catch {}
+    }
   },
   { immediate: true }
 )
 
-onUnmounted(stopTimer)
+onUnmounted(() => {
+  stopTimer()
+  try { document.documentElement.classList.remove('modal-open') } catch {}
+})
 
 function onClose() {
   emit('update:modelValue', false)
@@ -201,6 +268,13 @@ function onAccept() {
 function onDecline() {
   emit('decline', props.request)
   emit('update:modelValue', false)
+}
+
+function onAcceptAll() {
+  if (props.deliveryId != null) {
+    emit('accept-all', props.deliveryId)
+    emit('update:modelValue', false)
+  }
 }
 
 const priorityBadge = computed(() => {

@@ -13,6 +13,20 @@ export interface NearbyAssignment {
 export interface UnassignedPackageSummary {
   id: number
   description?: string
+  // Optional rich fields when backend includes them
+  weight?: string | number
+  weight_unit?: string
+  length?: string | number
+  width?: string | number
+  height?: string | number
+  dimension_unit?: string
+  fragile?: boolean
+  hazardous?: boolean
+  temperature_range?: string
+  temperature_unit?: string
+  volume?: string | number
+  volume_liters?: string | number
+  delivery_status?: string
 }
 
 export interface UnassignedPackagesByDelivery {
