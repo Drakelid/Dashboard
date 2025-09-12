@@ -1,30 +1,34 @@
 <template>
   <div class="grid gap-6 lg:grid-cols-3">
     <!-- Profile Card -->
-    <section class="rounded-xl border bg-white shadow-sm">
+    <section class="rounded-xl border bg-white shadow-sm relative">
       <header class="p-6 border-b text-center space-y-2">
         <div class="h-24 w-24 mx-auto rounded-full overflow-hidden ring-2 ring-green-200">
           <img class="h-full w-full object-cover" src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face" alt="Avatar" />
         </div>
-        <h3 class="text-lg font-semibold">John Doe</h3>
-        <p class="text-sm text-gray-500">Driver ID: PKG-DRV-2024-001</p>
+        <h3 class="text-lg font-semibold">{{ displayName }}</h3>
+        <p class="text-sm text-gray-500">Driver ID: {{ driverId }}</p>
+        <p v-if="error" class="text-sm text-red-600">{{ error }}</p>
       </header>
       <div class="p-6 space-y-4">
         <div class="text-center">
-          <span class="px-2 py-1 rounded bg-green-100 text-green-800 text-xs font-medium">Active • Online</span>
+          <span class="px-2 py-1 rounded bg-green-100 text-green-800 text-xs font-medium">{{ activeLabel }}</span>
         </div>
         <div class="space-y-3">
-          <div class="flex justify-between text-sm"><span class="text-gray-500">Member since</span><span class="font-medium">January 2024</span></div>
-          <div class="flex justify-between text-sm"><span class="text-gray-500">Vehicle Type</span><span class="font-medium">Cargo Van</span></div>
-          <div class="flex justify-between text-sm"><span class="text-gray-500">License Plate</span><span class="font-medium">PKG-123</span></div>
+          <div class="flex justify-between text-sm"><span class="text-gray-500">Member since</span><span class="font-medium">{{ memberSince }}</span></div>
+          <div class="flex justify-between text-sm"><span class="text-gray-500">Vehicle Type</span><span class="font-medium">{{ vehicleType }}</span></div>
+          <div class="flex justify-between text-sm"><span class="text-gray-500">License Plate</span><span class="font-medium">{{ licensePlate }}</span></div>
           <div class="flex justify-between text-sm"><span class="text-gray-500">Coverage Zone</span><span class="font-medium">Downtown & Suburbs</span></div>
         </div>
         <div class="flex gap-2">
-          <button class="flex-1 h-9 px-3 rounded border bg-white hover:bg-gray-50">Update Profile</button>
+          <button class="flex-1 h-9 px-3 rounded border bg-white hover:bg-gray-50" :disabled="loading">Update Profile</button>
           <button class="h-9 w-9 rounded border bg-white hover:bg-gray-50 grid place-items-center" aria-label="Vehicle">
             <Truck class="w-4 h-4" aria-hidden="true" />
           </button>
         </div>
+      </div>
+      <div v-if="loading" class="absolute inset-0 bg-white/60 grid place-items-center rounded-xl">
+        <Spinner />
       </div>
     </section>
 
@@ -89,5 +93,25 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted, computed } from 'vue'
+import { useDriverProfile } from '@/composables/useDriverProfile'
 import { Truck, Star, TrendingUp, Clock } from 'lucide-vue-next'
+import Spinner from '@/components/Spinner.vue'
+
+const { profile, loading, error, load } = useDriverProfile()
+
+onMounted(() => {
+  load()
+})
+
+const displayName = computed(() => {
+  const u = profile.value?.user
+  const name = [u?.first_name, u?.last_name].filter(Boolean).join(' ').trim()
+  return name || u?.email || 'Driver'
+})
+const driverId = computed(() => profile.value?.id ? String(profile.value.id) : '—')
+const vehicleType = computed(() => profile.value?.vehicle?.type || '—')
+const licensePlate = computed(() => profile.value?.vehicle?.license_plate || '—')
+const activeLabel = computed(() => profile.value?.active ? 'Active • Online' : 'Inactive')
+const memberSince = computed(() => (profile.value?.start_date || profile.value?.created_at || '—').toString().split('T')[0])
 </script>

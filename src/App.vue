@@ -1,5 +1,6 @@
 <template>
   <div class="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-green-50/20">
+    <DevAuthModeBanner v-if="isDev" />
     <div class="flex">
       <!-- Sidebar -->
       <aside class="hidden lg:block w-72 px-4 py-6 border-r bg-white/90 backdrop-blur">
@@ -42,13 +43,17 @@
       </div>
     </div>
   </div>
-  
+  <ToastHost />
 </template>
 
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
 import SidebarNav from '@/components/SidebarNav.vue'
 import { Bell } from 'lucide-vue-next'
+import ToastHost from '@/components/ToastHost.vue'
+import DevAuthModeBanner from '@/components/DevAuthModeBanner.vue'
+
+const isDev = import.meta.env.DEV
 </script>
 
 <style scoped>

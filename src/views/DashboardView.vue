@@ -30,26 +30,38 @@
     <!-- Quick Stats -->
     <OverviewCards />
 
-    <!-- Tabs Root -->
-    <TabsRoot v-model="tab" class="space-y-6">
+    <!-- Tabs -->
+    <div class="space-y-6">
       <!-- Tabs List -->
-      <TabsList class="grid w-full grid-cols-4 bg-gray-100 p-1 rounded-lg">
-        <TabsTrigger value="overview" class="px-3 py-2 rounded-md text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow data-[state=active]:text-blue-600">
+      <div class="grid w-full grid-cols-4 bg-gray-100 p-1 rounded-lg">
+        <button 
+          @click="tab = 'overview'" 
+          :class="['px-3 py-2 rounded-md text-sm font-medium transition-colors', tab === 'overview' ? 'bg-white shadow text-blue-600' : 'text-gray-600 hover:text-gray-900']"
+        >
           Overview
-        </TabsTrigger>
-        <TabsTrigger value="analytics" class="px-3 py-2 rounded-md text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow data-[state=active]:text-blue-600">
+        </button>
+        <button 
+          @click="tab = 'analytics'" 
+          :class="['px-3 py-2 rounded-md text-sm font-medium transition-colors', tab === 'analytics' ? 'bg-white shadow text-blue-600' : 'text-gray-600 hover:text-gray-900']"
+        >
           Analytics
-        </TabsTrigger>
-        <TabsTrigger value="tasks" class="px-3 py-2 rounded-md text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow data-[state=active]:text-blue-600">
+        </button>
+        <button 
+          @click="tab = 'tasks'" 
+          :class="['px-3 py-2 rounded-md text-sm font-medium transition-colors', tab === 'tasks' ? 'bg-white shadow text-blue-600' : 'text-gray-600 hover:text-gray-900']"
+        >
           Tasks
-        </TabsTrigger>
-        <TabsTrigger value="achievements" class="px-3 py-2 rounded-md text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow data-[state=active]:text-blue-600">
+        </button>
+        <button 
+          @click="tab = 'achievements'" 
+          :class="['px-3 py-2 rounded-md text-sm font-medium transition-colors', tab === 'achievements' ? 'bg-white shadow text-blue-600' : 'text-gray-600 hover:text-gray-900']"
+        >
           Achievements
-        </TabsTrigger>
-      </TabsList>
+        </button>
+      </div>
 
       <!-- Overview -->
-      <TabsContent value="overview" class="space-y-6">
+      <div v-if="tab === 'overview'" class="space-y-6">
         <!-- Main Grid -->
         <div class="grid gap-6 lg:grid-cols-3">
           <!-- Active Deliveries -->
@@ -102,15 +114,15 @@
             <DeliveryHistory />
           </aside>
         </div>
-      </TabsContent>
+      </div>
 
       <!-- Analytics -->
-      <TabsContent value="analytics">
+      <div v-if="tab === 'analytics'" class="space-y-6">
         <AnalyticsCharts />
-      </TabsContent>
+      </div>
 
       <!-- Tasks -->
-      <TabsContent value="tasks" class="space-y-4">
+      <div v-if="tab === 'tasks'" class="space-y-6">
         <div class="rounded-xl border bg-white p-4 shadow-sm">
           <div class="font-semibold mb-3">Upcoming Tasks</div>
           <div class="space-y-3">
@@ -146,10 +158,10 @@
             </div>
           </div>
         </div>
-      </TabsContent>
+      </div>
 
       <!-- Achievements -->
-      <TabsContent value="achievements">
+      <div v-if="tab === 'achievements'">
         <div class="grid gap-4 md:grid-cols-2">
           <div
             v-for="(ach, i) in achievements"
@@ -170,14 +182,13 @@
             </div>
           </div>
         </div>
-      </TabsContent>
-    </TabsRoot>
+      </div>
+    </div>
   </section>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
-import { TabsRoot, TabsList, TabsTrigger, TabsContent } from 'radix-vue'
 import OverviewCards from '@/components/OverviewCards.vue'
 import AnalyticsCharts from '@/components/AnalyticsCharts.vue'
 import DeliveryHistory from '@/components/DeliveryHistory.vue'

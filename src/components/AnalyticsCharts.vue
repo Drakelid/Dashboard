@@ -8,11 +8,14 @@
       </div>
     </div>
 
-    <!-- Performance Trend -->
-    <div class="rounded-xl border bg-white p-6">
-      <h3 class="font-semibold mb-3">Performance Trend</h3>
+    <!-- User Signups (Live) -->
+    <div class="rounded-xl border bg-white p-6 relative">
+      <h3 class="font-semibold mb-3">User Signups</h3>
       <div class="h-56">
-        <Line :data="performanceData" :options="lineOptions" />
+        <Line :data="signupsData" :options="lineOptions" />
+      </div>
+      <div v-if="statsLoading" class="absolute inset-0 bg-white/60 grid place-items-center">
+        <Spinner />
       </div>
     </div>
 
@@ -37,6 +40,9 @@
 <script setup lang="ts">
 import { Bar, Line, Pie } from 'vue-chartjs'
 import 'chart.js/auto'
+import { ref, onMounted } from 'vue'
+import { useDashboardStats } from '@/composables/useDashboardStats'
+import Spinner from '@/components/Spinner.vue'
 
 // Chart data
 const earningsData = {
@@ -51,18 +57,19 @@ const earningsData = {
   ]
 }
 
-const performanceData = {
+// Live signups data, defaults then replaced on load
+const signupsData = ref({
   labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
   datasets: [
     {
-      label: 'On-time %',
-      data: [89, 92, 94, 95, 96, 97],
+      label: 'Signups',
+      data: [10, 12, 9, 14, 18, 16],
       borderColor: 'rgb(59,130,246)',
       backgroundColor: 'rgba(59,130,246,0.2)',
       tension: 0.3
     }
   ]
-}
+})
 
 const deliveryTypeData = {
   labels: ['Standard', 'Express', 'Eco'],
@@ -108,4 +115,32 @@ const pieOptions = {
   maintainAspectRatio: false,
   plugins: { legend: { position: 'bottom' as const } }
 }
+
+// Load live stats and update the chart
+const { stats, load, loading: statsLoading } = useDashboardStats()
+
+onMounted(async () => {
+  try {
+    await load()
+    if (stats.value && stats.value.length) {
+      // take last 7 by date, ascending
+      const sorted = [...stats.value].sort((a, b) => a.date.localeCompare(b.date))
+      const last7 = sorted.slice(-7)
+      signupsData.value = {
+        labels: last7.map(s => s.date),
+        datasets: [
+          {
+            label: 'Signups',
+            data: last7.map(s => s.count),
+            borderColor: 'rgb(59,130,246)',
+            backgroundColor: 'rgba(59,130,246,0.2)',
+            tension: 0.3
+          }
+        ]
+      }
+    }
+  } catch (e) {
+    // leave fallback data
+  }
+})
 </script>

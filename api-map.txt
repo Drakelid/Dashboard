@@ -1,0 +1,154 @@
+API Map
+Generated: 2025-09-11
+
+Summary
+- Default DRF authentication: SessionAuthentication, BasicAuthentication (carma/settings.py → REST_FRAMEWORK.DEFAULT_AUTHENTICATION_CLASSES).
+- Default DRF permissions: apps.api.permissions.IsAuthenticatedOrHasUserAPIKey (carma/settings.py → REST_FRAMEWORK.DEFAULT_PERMISSION_CLASSES).
+- API Key scheme: header Authorization: Api-Key <YOUR_KEY> (declared for docs via SPECTACULAR_SETTINGS securitySchemes as Authorization header; parsing via rest_framework_api_key KeyParser; X-Api-Key also supported by library).
+- API keys are user-scoped via apps.api.models.UserAPIKey; permission class HasUserAPIKey sets request.user to the key’s user and rejects inactive users (apps/api/permissions.py).
+- No JWT is configured.
+
+Endpoints
+
+1) Drivers: update location
+- Path: /drivers/api/location/
+- Method: POST
+- Handler: apps.drivers.views.DriverLocationUpdateView.post
+- Permissions: IsAuthenticatedOrHasUserAPIKey
+- Auth accepted: Session, Basic, API Key (Authorization: Api-Key <key>)
+- Request body (JSON) — apps.drivers.serializers.DriverLocationUpdateSerializer:
+  - latitude: float (required; -90..90)
+  - longitude: float (required; -180..180)
+  - accuracy_m: float (optional)
+  - heading_deg: float (optional; 0..360)
+  - speed_kph: float (optional)
+- Responses:
+  - 200: {"status":"ok","recorded_at":"<ISO-8601>"}
+  - 400: {"detail":"No driver profile found for user"} or serializer validation errors
+  - 401: {"detail":"Unauthorized"} (no valid auth)
+- Notes:
+  - Requires the authenticated identity to have a Driver profile (user.driver_profile), else 400.
+
+2) Drivers: suggested deliveries for a driver (nearby pickups)
+- Path: /drivers/api/suggestions/
+- Method: GET
+- Handler: apps.drivers.views.DriverSuggestedDeliveriesView.get
+- Permissions: IsAuthenticatedOrHasUserAPIKey
+- Auth accepted: Session, Basic, API Key
+- Query params:
+  - limit: int (optional; default 10)
+  - radius_km: float (optional; default from settings.MATCH_MAX_RADIUS_KM; default 10.0)
+- Preconditions:
+  - The user must have a Driver profile
+  - The driver must have a recent location (recorded within settings.DRIVER_LOCATION_TTL_SECONDS; default 300s)
+- Response (200): array of DeliverySuggestionSerializer objects:
+  - delivery_id: int
+  - distance_km: float
+  - eta_minutes: float
+  - score: float
+  - pickup_latitude: decimal
+  - pickup_longitude: decimal
+  - pickup_location: string|null
+  - pickup_date: date
+  - pickup_time: time|null
+  - delivery_location: string
+  - delivery_date: date|null
+  - delivery_time: time|null
+- Errors:
+  - 400: "No driver profile found for user" or "No recent location for driver"
+  - 401: "Unauthorized"
+
+3) Deliveries: suggested drivers for a delivery (nearby drivers)
+- Path: /deliveries/{delivery_id}/api/suggested-drivers/
+- Method: GET
+- Handler: apps.deliveries.views.DeliverySuggestedDriversView.get
+- Permissions: IsAuthenticatedOrHasUserAPIKey
+- Auth accepted: Session, Basic, API Key
+- Query params:
+  - limit: int (optional; default 10)
+  - radius_km: float (optional; default from settings.MATCH_MAX_RADIUS_KM; default 10.0)
+- Preconditions:
+  - Delivery exists
+  - Delivery has pickup_latitude and pickup_longitude
+  - At least one package for the delivery is in status "ready_for_pickup"
+- Response (200): array of DriverSuggestionSerializer objects:
+  - driver_id: int
+  - distance_km: float
+  - eta_minutes: float
+  - score: float
+  - last_latitude: decimal
+  - last_longitude: decimal
+  - last_recorded_at: datetime
+- Errors:
+  - 400: missing pickup coords or no ready-for-pickup packages
+  - 401: "Unauthorized"
+  - 404: delivery not found
+
+4) Dashboard: user signup stats (admin-only)
+- Path: /dashboard/api/user-signups/
+- Method: GET
+- Handler: apps.dashboard.views.UserSignupStatsView.get
+- Permissions: IsAdminUser (overrides project default)
+- Auth accepted: Session, Basic (API key not used here)
+- Query params: none
+- Response (200): array of
+  - { "date": "YYYY-MM-DD", "count": int }
+
+5) OpenAPI and Docs
+- Path: /api/schema/
+  - Method: GET
+  - Handler: drf_spectacular.views.SpectacularAPIView
+  - Permissions: default (IsAuthenticatedOrHasUserAPIKey)
+  - Returns: OpenAPI 3 schema JSON
+- Path: /api/schema/swagger-ui/
+  - Method: GET
+  - Handler: drf_spectacular.views.SpectacularSwaggerView
+  - Permissions: default (IsAuthenticatedOrHasUserAPIKey)
+  - Returns: Swagger UI
+- Path: /api/schema/redoc/
+  - Method: GET
+  - Handler: drf_spectacular.views.SpectacularRedocView
+  - Permissions: default (IsAuthenticatedOrHasUserAPIKey)
+  - Returns: ReDoc UI
+
+6) Third-party: Celery Progress endpoints
+- Base Path: /celery-progress/
+- Provided by: celery_progress.urls
+- Purpose: Task progress polling endpoints (JSON)
+- Permissions/Auth: per library defaults (not explicitly overridden here)
+- See package docs for exact subpaths and payload shapes.
+
+Non-DRF JSON/HTMX endpoints (Login required)
+Note: These are not DRF APIViews but return JSON used by the UI.
+
+A) Deliveries
+- GET /deliveries/search-receivers/
+  - Returns: JSON {"html": "<rendered HTML>"} based on ?search=
+- GET /deliveries/get-sender-address/?sender_id=<id>
+  - Returns: {"success":true,"address":"...","name":"..."} or {"success":false,"error":"..."}
+- GET /deliveries/get-receiver-address/?receiver_id=<id>
+  - Returns: {"success":true,"address":"...","name":"..."} or {"success":false,"error":"..."}
+- POST /deliveries/create-receiver/
+  - On success: {"success":true,"receiver_id":<id>,"receiver_name":"...","message":"..."}
+  - On validation error: returns an HTML fragment with the form
+
+Account API key management (HTML views)
+- POST /users/api-keys/create/ (login required)
+  - Creates a new UserAPIKey and flashes the key once; redirects to users:user_profile
+- POST /users/api-keys/revoke/ (login required)
+  - Revokes a key by id; redirects to users:user_profile
+
+Health check
+- GET /health/
+- Handler: apps.web.views.HealthCheck (health_check MainView)
+- Access: If HEALTH_CHECK_TOKENS is set, requires ?token=<value> to avoid 404; otherwise open.
+- Response: Provided by django-health-check.
+
+Authentication and Permission Notes
+- Defaults (unless view overrides):
+  - Authentication: SessionAuthentication, BasicAuthentication
+  - Permissions: IsAuthenticatedOrHasUserAPIKey (either a logged-in user or a valid API key)
+- API Key usage:
+  - Header: Authorization: Api-Key <YOUR_KEY> (alternatively X-Api-Key supported by the parser)
+  - Keys are tied to a specific user (apps.api.models.UserAPIKey.user). Inactive users are rejected.
+  - The key does not carry fine-grained per-endpoint scopes; authorization relies on view-level checks (e.g., requiring a Driver profile).

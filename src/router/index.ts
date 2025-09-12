@@ -1,6 +1,8 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router'
+import { useAuth } from '@/composables/useAuth'
 
 const routes: RouteRecordRaw[] = [
+  { path: '/login', name: 'login', component: () => import('../views/LoginView.vue') },
   { path: '/', name: 'dashboard', component: () => import('../views/DashboardView.vue') },
   { path: '/active', name: 'active', component: () => import('../views/ActiveDeliveriesView.vue') },
   { path: '/route', name: 'route', component: () => import('../views/RoutePlanningView.vue') },
@@ -9,6 +11,8 @@ const routes: RouteRecordRaw[] = [
   { path: '/profile', name: 'profile', component: () => import('../views/ProfileView.vue') },
   { path: '/earnings', name: 'earnings', component: () => import('../views/EarningsView.vue') },
   { path: '/support', name: 'support', component: () => import('../views/SupportView.vue') },
+  // Dev/test view for public delivery endpoints
+  { path: '/api-test', name: 'api-test', component: () => import('../views/DeliveryApiTestView.vue') },
 ]
 
 const router = createRouter({
@@ -17,6 +21,39 @@ const router = createRouter({
   scrollBehavior() {
     return { top: 0 }
   },
+})
+
+router.beforeEach((to, from) => {
+  const { isAuthenticated } = useAuth()
+  const apiKey = (import.meta as any).env?.VITE_API_KEY
+
+  const allowUnauthed = ['/login', '/api-test']
+  const isAllow = allowUnauthed.some(p => to.path === p || to.path.startsWith(p + '/'))
+
+  // In API key mode, treat user as authenticated for routing purposes
+  if (apiKey) {
+    if (to.path === '/login') {
+      const redirect = (to.query.redirect as string) || from.fullPath || '/'
+      return redirect
+    }
+    return true
+  }
+
+  // Allow listed public routes
+  if (isAllow) return true
+
+  // Enforce auth for all other routes
+  if (!isAuthenticated.value) {
+    return { name: 'login', query: { redirect: to.fullPath } }
+  }
+
+  // Prevent navigating to /login when already authenticated
+  if (to.path === '/login' && isAuthenticated.value) {
+    const redirect = (to.query.redirect as string) || from.fullPath || '/'
+    return redirect
+  }
+
+  return true
 })
 
 export default router
