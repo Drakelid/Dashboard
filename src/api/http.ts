@@ -42,8 +42,12 @@ export function getDefaultAuthConfig(): RequestOptions['auth'] | undefined {
 function buildUrl(path: string, query?: Record<string, any>) {
   const clean = path.startsWith('/') ? path : `/${path}`
   let url: URL
-  if (!API_BASE_URL) {
-    url = new URL(clean, window.location.origin)
+  // On Vercel (host ends with .vercel.app), prefer same-origin so rewrites in vercel.json apply and avoid CORS entirely.
+  const host = (typeof window !== 'undefined' && window.location?.hostname) ? window.location.hostname : ''
+  const forceRelative = host.endsWith('.vercel.app') || (((import.meta as any).env?.VITE_FORCE_RELATIVE_API ?? '').toString().toLowerCase() === 'true')
+  if (!API_BASE_URL || forceRelative) {
+    const origin = (typeof window !== 'undefined' && window.location?.origin) ? window.location.origin : 'http://localhost'
+    url = new URL(clean, origin)
   } else {
     const base = API_BASE_URL.replace(/\/$/, '')
     url = new URL(base + clean)
