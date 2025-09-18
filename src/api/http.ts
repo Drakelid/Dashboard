@@ -162,7 +162,9 @@ async function request<T>(method: HttpMethod, path: string, body?: any, opts: Re
 
   const init: RequestInit = {
     method,
-    credentials: 'include',
+    // Only include credentials (cookies) when not sending Authorization (API key/basic)
+    // This enables cookie-based auth locally while allowing proxy-based API key mode in prod without CORS credential issues.
+    credentials: 'omit',
     signal: opts.signal,
     headers,
   }
@@ -179,6 +181,9 @@ async function request<T>(method: HttpMethod, path: string, body?: any, opts: Re
 
   const apiKeyHeaderName = ((import.meta as any).env?.VITE_API_KEY_HEADER as string | undefined) || 'Authorization'
   const hasAuthHeader = !!headers[apiKeyHeaderName]
+  if (!hasAuthHeader) {
+    init.credentials = 'include'
+  }
 
   // Ensure CSRF cookie exists for unsafe methods when NOT using Authorization, then attach header if present
   const unsafe = method !== 'GET'

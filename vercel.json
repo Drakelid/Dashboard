@@ -2,5 +2,12 @@
   "buildCommand": "npm run vercel-build",
   "outputDirectory": "build",
   "framework": "vite",
-  "devCommand": "npm run dev"
+  "devCommand": "npm run dev",
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "https://test.sambring.no/api/:path*" },
+    { "source": "/dashboard/api/:path*", "destination": "https://test.sambring.no/dashboard/api/:path*" },
+    { "source": "/drivers/:path*", "destination": "https://test.sambring.no/drivers/:path*" },
+    { "source": "/deliveries/:path*", "destination": "https://test.sambring.no/deliveries/:path*" },
+    { "source": "/celery-progress/:path*", "destination": "https://test.sambring.no/celery-progress/:path*" }
+  ]
 }
