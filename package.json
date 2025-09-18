@@ -2,6 +2,9 @@
       "name": "sambring-driver-dash",
       "version": "0.1.0",
       "private": true,
+      "engines": {
+            "node": ">=18.17.0"
+      },
       "dependencies": {
             "chart.js": "^4.5.0",
             "clsx": "*",
@@ -21,8 +24,9 @@
             "vitest": "^1.6.0"
       },
       "scripts": {
-            "dev": "vite",
-            "build": "vite build",
+            "dev": "node ./node_modules/vite/bin/vite.js",
+            "build": "node ./node_modules/vite/bin/vite.js build",
+            "vercel-build": "node ./node_modules/vite/bin/vite.js build",
             "test": "vitest run"
       }
 }
