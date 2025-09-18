@@ -14,7 +14,7 @@
       <div class="h-56">
         <Line :data="signupsData" :options="lineOptions" />
       </div>
-      <div v-if="statsLoading" class="absolute inset-0 bg-white/60 grid place-items-center">
+      <div v-if="statsLoading" class="absolute inset-0 bg-white/60 grid place-items-center pointer-events-none">
         <Spinner />
       </div>
     </div>

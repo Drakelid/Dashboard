@@ -4,7 +4,7 @@
 
     <!-- Combined Map (Jobs + Nearby) -->
     <section class="rounded-xl border bg-white shadow-sm">
-      <header class="p-4 border-b flex items-center justify-between">
+      <header class="p-4 border-b flex items-center justify-between flex-wrap gap-2">
         <div>
           <h3 class="text-lg font-semibold">Map</h3>
           <div class="mt-1 text-xs text-gray-500 flex items-center gap-4">
@@ -13,9 +13,9 @@
             <span class="inline-flex items-center gap-1"><span class="inline-block h-2 w-2 rounded-full bg-gray-800"></span> You</span>
           </div>
         </div>
-        <div class="flex items-center gap-2">
-          <button class="h-8 px-3 rounded border bg-white hover:bg-gray-50 disabled:opacity-50" :disabled="nearbyLoading" @click="locateAndLoadNearby">{{ nearbyLoading ? 'Locating…' : 'Use my location' }}</button>
-          <button class="h-8 px-3 rounded border bg-white hover:bg-gray-50 disabled:opacity-50" :disabled="nearbyLoading" @click="loadNearby()">Refresh</button>
+        <div class="flex items-center gap-2 flex-wrap">
+          <button class="h-8 px-3 tap-target rounded border bg-white hover:bg-gray-50 disabled:opacity-50" :disabled="nearbyLoading" @click="locateAndLoadNearby">{{ nearbyLoading ? 'Locating…' : 'Use my location' }}</button>
+          <button class="h-8 px-3 tap-target rounded border bg-white hover:bg-gray-50 disabled:opacity-50" :disabled="nearbyLoading" @click="loadNearby()">Refresh</button>
         </div>
       </header>
       <div class="p-4">
@@ -55,23 +55,23 @@
         <div v-else-if="nearby.length === 0" class="text-sm text-gray-500">No nearby assignments right now.</div>
         <div v-else class="grid gap-3">
           <div v-for="group in nearby" :key="group.delivery_id" class="rounded-lg border p-3">
-            <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center justify-between gap-3 flex-wrap">
               <div class="text-sm font-semibold cursor-pointer hover:underline" @click.stop="openOnMap(group.delivery_id)">Delivery #{{ group.delivery_id }}</div>
-              <div class="flex items-center gap-3">
+              <div class="flex items-center gap-3 flex-wrap">
                 <div class="text-xs text-gray-500" v-if="group.service || group.price">
                   <span v-if="group.service">{{ group.service }}</span>
                   <span v-if="group.service && group.price"> • </span>
                   <span v-if="group.price">{{ group.price }}</span>
                 </div>
                 <button
-                  class="h-8 px-3 rounded border bg-white hover:bg-gray-50 disabled:opacity-50 text-sm"
+                  class="h-8 px-3 tap-target rounded border bg-white hover:bg-gray-50 disabled:opacity-50 text-sm"
                   @click.stop="openOnMap(group.delivery_id)"
                 >
                   Show on map
                 </button>
                 <button
                   v-if="canAssign"
-                  class="h-8 px-3 rounded border bg-white hover:bg-gray-50 disabled:opacity-50 text-sm"
+                  class="h-8 px-3 tap-target rounded border bg-white hover:bg-gray-50 disabled:opacity-50 text-sm"
                   :disabled="acceptingGroupId === group.delivery_id || group.packages.length === 0"
                   @click="acceptAllInGroup(group.delivery_id)"
                 >
@@ -82,11 +82,11 @@
             <div class="mt-1 grid gap-2 md:grid-cols-2 text-sm">
               <div>
                 <div class="text-gray-500">Pickup</div>
-                <div class="font-medium">{{ group.pickup_location || '—' }}</div>
+                <div class="font-medium break-words">{{ group.pickup_location || '—' }}</div>
               </div>
               <div>
                 <div class="text-gray-500">Delivery</div>
-                <div class="font-medium">{{ group.delivery_location || '—' }}</div>
+                <div class="font-medium break-words">{{ group.delivery_location || '—' }}</div>
               </div>
             </div>
 
@@ -94,7 +94,7 @@
             <div class="mt-3">
               <div class="text-xs text-gray-500 mb-1">Packages</div>
               <ul class="space-y-2">
-                <li v-for="p in group.packages" :key="p.id" class="flex items-start justify-between gap-3" :class="{ 'bg-green-50 border border-green-200 rounded': acceptedIds.has(p.id) }">
+                <li v-for="p in group.packages" :key="p.id" class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3" :class="{ 'bg-green-50 border border-green-200 rounded': acceptedIds.has(p.id) }">
                   <div class="text-sm flex-1">
                     <div>
                       <span class="font-medium">#{{ p.id }}</span>
@@ -105,7 +105,7 @@
                       </span>
                     </div>
                     <!-- Extra attributes -->
-                    <div class="mt-1 flex flex-wrap gap-2 text-xs">
+                    <div class="mt-1 flex flex-wrap gap-2 text-sm sm:text-xs">
                       <span v-if="p.weight != null" class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-gray-100 text-gray-700">
                         <span class="font-medium">Weight:</span>
                         <span>{{ p.weight }}{{ p.weight_unit || '' }}</span>
@@ -126,13 +126,13 @@
                       </span>
                       <span v-if="p.delivery_status" class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-green-50 text-green-700">
                         <span class="font-medium">Status:</span>
-                        <span>{{ p.delivery_status }}</span>
+                        <span>{{ formatStatus(p.delivery_status) }}</span>
                       </span>
                     </div>
                   </div>
-                  <div class="pt-1" v-if="canAssign">
+                  <div class="pt-2 sm:pt-1" v-if="canAssign">
                     <template v-if="!acceptedIds.has(p.id)">
-                      <button class="h-8 px-3 rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50" :disabled="assigningId === p.id || acceptingGroupId === group.delivery_id" @click="acceptAssignment(p.id)">
+                      <button class="h-8 px-3 tap-target rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50" :disabled="assigningId === p.id || acceptingGroupId === group.delivery_id" @click="acceptAssignment(p.id)">
                         {{ assigningId === p.id ? 'Accepting…' : 'Accept' }}
                       </button>
                     </template>
@@ -150,7 +150,7 @@
         <div class="mt-2 pt-3 border-t text-sm" v-if="canAssign">
           <div class="flex items-center gap-2">
             <input type="number" v-model.number="manualPackageId" class="h-9 px-3 rounded border w-40" placeholder="Package ID" />
-            <button class="h-9 px-3 rounded border bg-white hover:bg-gray-50 disabled:opacity-50" :disabled="!manualPackageId || assigningId === manualPackageId" @click="acceptByManualId">Accept by ID</button>
+            <button class="h-9 px-3 tap-target rounded border bg-white hover:bg-gray-50 disabled:opacity-50" :disabled="!manualPackageId || assigningId === manualPackageId" @click="acceptByManualId">Accept by ID</button>
           </div>
         </div>
         <div class="mt-2 pt-3 border-t text-xs text-gray-500" v-else>
@@ -159,9 +159,8 @@
       </div>
     </section>
 
-    <!-- New Pickup Modal (only when allowed based on active deliveries) -->
+    <!-- New Pickup Modal -->
     <NewPickupRequestModal
-      v-if="canShowNewPickup"
       v-model="showNewPickup"
       :request="currentRequest"
       :packages="modalPackages"
@@ -313,7 +312,9 @@ async function loadNearby() {
         price: (g as any).price,
         pickup_lat: Number.isFinite(lat as number) ? (lat as number) : undefined,
         pickup_lng: Number.isFinite(lng as number) ? (lng as number) : undefined,
-        packages: (g.packages || []).map(p => ({
+        packages: (g.packages || [])
+          .filter(p => String((p as any).delivery_status || '').toLowerCase() === 'ready_for_pickup')
+          .map(p => ({
           id: p.id,
           description: p.description,
           weight: (p as any).weight,
@@ -430,16 +431,54 @@ const currentRequest = ref<NewPickupRequest>({
   expiresInSeconds: 0,
 })
 
+let pickupOpenTimer: number | null = null
+
 const removeListener = addNewPickupListener((req) => {
-  if (!canShowNewPickup.value) return
-  currentRequest.value = req
-  showNewPickup.value = true
+  // Clear any pending open from a previous request
+  if (pickupOpenTimer != null) {
+    clearTimeout(pickupOpenTimer)
+    pickupOpenTimer = null
+  }
+  // Seed request; only open when a matching group exists AND has packages (ready_for_pickup)
+  let finalReq = req
+  let attempts = 0
+  const openWhenReady = () => {
+    attempts += 1
+    // Try to resolve candidate and enrich
+    const cand = findModalCandidate(finalReq)
+    if (cand && Array.isArray(cand.packages)) {
+      // Exclude locally accepted packages to avoid prompting on already accepted
+      const visible = cand.packages.filter(p => !acceptedIds.has(p.id))
+      if (visible.length > 0) {
+        if (finalReq.deliveryId == null) finalReq = { ...finalReq, deliveryId: cand.delivery_id }
+        finalReq = enrichRequestFromGroup(finalReq, cand)
+        currentRequest.value = finalReq
+        showNewPickup.value = true
+        pickupOpenTimer = null
+        return
+      }
+    }
+    if (attempts >= 10) {
+      // Give up without opening the modal
+      pickupOpenTimer = null
+      return
+    }
+    pickupOpenTimer = window.setTimeout(openWhenReady, 300)
+  }
+  // Start the check loop
+  openWhenReady()
 })
 
 onUnmounted(() => removeListener())
 onUnmounted(() => {
   document.removeEventListener('visibilitychange', onVisibilityChange)
   stopNearbyAutoRefresh()
+})
+onUnmounted(() => {
+  if (pickupOpenTimer != null) {
+    clearTimeout(pickupOpenTimer)
+    pickupOpenTimer = null
+  }
 })
 
 // Dev-time demo trigger - only when allowed based on API data
@@ -459,36 +498,22 @@ onMounted(async () => {
   document.addEventListener('visibilitychange', onVisibilityChange)
   if (import.meta.env.DEV) {
     setTimeout(() => {
-      if (!canShowNewPickup.value) return
-      const g = nearby.value[0]
-      if (g) {
-        emitNewPickupRequest({
-          priority: 'standard',
-          pickup: { name: g.receiver_name || 'Pickup', address: g.pickup_location },
-          dropoff: { name: g.receiver_name || 'Receiver', address: g.delivery_location },
-          etaMinutes: 11,
-          distanceKm: 1.0,
-          dimensions: '29 × 20 × 11 cm',
-          weightKg: 2.2,
-          volumeL: 6.4,
-          feeKr: 75,
-          expiresInSeconds: 150, // 2:30
-          deliveryId: g.delivery_id,
-        })
-      } else {
-        emitNewPickupRequest({
-          priority: 'standard',
-          pickup: { name: 'Kiwi Majorstuen', address: 'Bogstadveien 55, 0366 Oslo' },
-          dropoff: { name: 'Sofia Hansen', address: 'Storgata 28, 0184 Oslo' },
-          etaMinutes: 11,
-          distanceKm: 1.0,
-          dimensions: '29 × 20 × 11 cm',
-          weightKg: 2.2,
-          volumeL: 6.4,
-          feeKr: 75,
-          expiresInSeconds: 150, // 2:30
-        })
-      }
+      // Only emit demo pickup if there's a nearby group with ready_for_pickup packages
+      const g = nearby.value.find(gr => Array.isArray(gr.packages) && gr.packages.length > 0)
+      if (!g) return
+      emitNewPickupRequest({
+        priority: 'standard',
+        pickup: { name: g.receiver_name || 'Pickup', address: g.pickup_location },
+        dropoff: { name: g.receiver_name || 'Receiver', address: g.delivery_location },
+        etaMinutes: 11,
+        distanceKm: 1.0,
+        dimensions: '29 × 20 × 11 cm',
+        weightKg: 2.2,
+        volumeL: 6.4,
+        feeKr: 75,
+        expiresInSeconds: 150, // 2:30
+        deliveryId: g.delivery_id,
+      })
     }, 800)
   }
 })
@@ -539,26 +564,169 @@ watch(liveErr, (msg) => {
 })
 
 // Matching helper for modal to find the relevant nearby group (prefer explicit deliveryId)
-function findModalCandidate() {
-  const req = currentRequest.value
+function findModalCandidate(reqOverride?: NewPickupRequest) {
+  const req = reqOverride ?? currentRequest.value
   if (!req) return undefined
   // Prefer id when provided
   if (req.deliveryId != null) {
     return nearby.value.find(g => g.delivery_id === req.deliveryId)
   }
-  const norm = (s?: string) => (s || '').toLowerCase().trim()
-  const pAddr = norm(req.pickup?.address)
-  const dAddr = norm(req.dropoff?.address)
-  return nearby.value.find(g => {
-    const gp = norm(g.pickup_location)
-    const gd = norm(g.delivery_location)
-    const pOk = pAddr ? gp.includes(pAddr) || pAddr.includes(gp) : true
-    const dOk = dAddr ? gd.includes(dAddr) || dAddr.includes(gd) : true
-    return pOk && dOk
-  })
+  // Robust matching by normalized token similarity
+  const normalize = (s?: string) => (s || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // strip diacritics
+    .replace(/[^a-z0-9]+/g, ' ') // remove punctuation -> spaces
+    .replace(/\s+/g, ' ') // collapse spaces
+    .trim()
+  const tokens = (s?: string) => new Set(normalize(s).split(' ').filter(t => t.length > 2))
+  const jaccard = (a: Set<string>, b: Set<string>) => {
+    if (!a.size || !b.size) return 0
+    let inter = 0
+    for (const t of a) if (b.has(t)) inter++
+    return inter / (a.size + b.size - inter)
+  }
+  const pTokens = tokens(req.pickup?.address)
+  const dTokens = tokens(req.dropoff?.address)
+  let best: typeof nearby.value[number] | undefined
+  let bestScore = 0
+  for (const g of nearby.value) {
+    const gpT = tokens(g.pickup_location)
+    const gdT = tokens(g.delivery_location)
+    const sp = pTokens.size ? jaccard(pTokens, gpT) : 0
+    const sd = dTokens.size ? jaccard(dTokens, gdT) : 0
+    // Combined score; small bonus if any direct substring match exists
+    const gp = normalize(g.pickup_location)
+    const gd = normalize(g.delivery_location)
+    const rp = normalize(req.pickup?.address)
+    const rd = normalize(req.dropoff?.address)
+    const bonus = (rp && gp.includes(rp) || rp && rp.includes(gp) ? 0.2 : 0) + (rd && gd.includes(rd) || rd && rd.includes(gd) ? 0.2 : 0)
+    const score = (sp + sd) / 2 + bonus
+    if (score > bestScore) {
+      bestScore = score
+      best = g
+    }
+  }
+  // If similarity is too low, fall back to nearest group (by pickup coords) or first group
+  if (bestScore < 0.15) {
+    if (nearby.value.length === 0) return undefined
+    // Prefer nearest by pickup coordinates when available
+    const hasCoord = (g: any) => g?.pickup_lat != null && g?.pickup_lng != null
+    const cur = coords.value
+    if (cur?.lat != null && cur?.lng != null && nearby.value.some(hasCoord)) {
+      let nearest = nearby.value.find(hasCoord)!
+      let bestD = Infinity
+      for (const g of nearby.value) {
+        if (!hasCoord(g)) continue
+        const d = haversineKm(cur.lat, cur.lng, g.pickup_lat, g.pickup_lng)
+        if (d < bestD) { bestD = d; nearest = g }
+      }
+      return nearest
+    }
+    // Otherwise just return the first group
+    return nearby.value[0]
+  }
+  return best
 }
 
 // Try to find matching nearby group for the popup to show real packages
 const modalPackages = computed(() => findModalCandidate()?.packages || [])
 const modalDeliveryId = computed(() => currentRequest.value?.deliveryId ?? findModalCandidate()?.delivery_id)
+
+// ---- Enrichment helpers to replace placeholder content with real data ----
+function parseNum(n: any): number | null { if (n == null) return null; const s = typeof n === 'string' ? n.replace(/,(?=\d)/g, '.').trim() : n; const v = typeof s === 'number' ? s : parseFloat(String(s)); return Number.isFinite(v) ? v : null }
+function toKg(value: number, unit?: string): number {
+  const u = (unit || '').toLowerCase()
+  if (u === 'g' || u === 'gram' || u === 'grams') return value / 1000
+  if (u === 'lb' || u === 'lbs' || u === 'pound' || u === 'pounds') return value * 0.453592
+  return value // assume kg
+}
+function volumeLitersFromDims(p: any): number | null {
+  const L = parseNum(p?.length); const W = parseNum(p?.width); const H = parseNum(p?.height)
+  if (L == null || W == null || H == null) return null
+  // Convert dims to cm first
+  const unit = (p?.dimension_unit || '').toLowerCase()
+  const toCm = (v: number) => unit === 'mm' ? v / 10 : unit === 'm' ? v * 100 : unit === 'in' || unit === 'inch' || unit === 'inches' ? v * 2.54 : v
+  const lcm = toCm(L), wcm = toCm(W), hcm = toCm(H)
+  return (lcm * wcm * hcm) / 1000 // cm^3 to liters
+}
+function firstDimsString(group: any): string | null {
+  for (const p of group?.packages || []) {
+    if (p?.length != null && p?.width != null && p?.height != null) {
+      const unit = p.dimension_unit || 'cm'
+      return `${p.length} × ${p.width} × ${p.height} ${unit}`
+    }
+  }
+  return null
+}
+function sumWeightKg(group: any): number | null {
+  let total = 0; let found = false
+  for (const p of group?.packages || []) {
+    const w = parseNum(p?.weight)
+    if (w != null) { total += toKg(w, p?.weight_unit); found = true }
+  }
+  return found ? Math.max(0, total) : null
+}
+function sumVolumeL(group: any): number | null {
+  let total = 0; let found = false
+  for (const p of group?.packages || []) {
+    const v = parseNum(p?.volume)
+    const calc = v != null ? v : volumeLitersFromDims(p)
+    if (calc != null) { total += calc; found = true }
+  }
+  return found ? Math.max(0, total) : null
+}
+function parseKr(price?: string): number | null {
+  if (!price) return null
+  const m = price.replace(/[^0-9,\.]/g, '').replace(/,(?=\d{2}\b)/, '.').match(/\d+(?:\.\d+)?/)
+  return m ? parseFloat(m[0]) : null
+}
+function formatStatus(s?: string): string {
+  return String(s || '').replace(/_/g, ' ')
+}
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const toRad = (d: number) => d * Math.PI / 180
+  const R = 6371
+  const dLat = toRad(lat2 - lat1)
+  const dLon = toRad(lon2 - lon1)
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2)**2
+  return 2 * R * Math.asin(Math.sqrt(a))
+}
+function enrichRequestFromGroup(req: NewPickupRequest, group: any): NewPickupRequest {
+  const enriched: NewPickupRequest = { ...req }
+  // Align addresses/names with the matched group
+  if (group?.pickup_location) {
+    enriched.pickup = {
+      name: group?.receiver_name || enriched.pickup?.name || 'Pickup',
+      address: group.pickup_location,
+    }
+  }
+  if (group?.delivery_location) {
+    enriched.dropoff = {
+      name: group?.receiver_name || enriched.dropoff?.name || 'Receiver',
+      address: group.delivery_location,
+    }
+  }
+  const dims = firstDimsString(group); if (dims) enriched.dimensions = dims
+  const wkg = sumWeightKg(group); if (wkg != null) enriched.weightKg = Math.round(wkg * 10) / 10
+  const vol = sumVolumeL(group); if (vol != null) enriched.volumeL = Math.round(vol)
+  const fee = parseKr(group?.price); if (fee != null) enriched.feeKr = Math.round(fee)
+  // Distance/ETA if we have coordinates
+  if (coords.value?.lat != null && coords.value?.lng != null && group?.pickup_lat != null && group?.pickup_lng != null) {
+    const dist = haversineKm(coords.value.lat, coords.value.lng, group.pickup_lat, group.pickup_lng)
+    enriched.distanceKm = Math.round(dist * 10) / 10
+    const avgKmh = 25 // conservative urban average
+    enriched.etaMinutes = Math.max(1, Math.round((dist / avgKmh) * 60))
+  }
+  return enriched
+}
+
+// When the modal is shown but deliveryId is missing, attach it as soon as we can
+watch([showNewPickup, nearby], () => {
+  if (!showNewPickup.value) return
+  if (currentRequest.value && currentRequest.value.deliveryId == null) {
+    const cand = findModalCandidate()
+    if (cand) currentRequest.value = enrichRequestFromGroup({ ...currentRequest.value, deliveryId: cand.delivery_id }, cand)
+  }
+})
 </script>

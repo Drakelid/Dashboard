@@ -7,7 +7,7 @@
 
     <div class="p-4 space-y-4">
       <!-- Tabs -->
-      <div class="flex gap-2">
+      <div class="flex flex-wrap gap-2">
         <button
           class="h-9 px-3 rounded border text-sm"
           :class="activeTab === 'chat' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white hover:bg-gray-50'"
@@ -62,7 +62,7 @@
           </div>
         </div>
 
-        <div class="flex gap-2">
+        <div class="flex flex-col sm:flex-row gap-2">
           <input
             v-model="newMessage"
             type="text"

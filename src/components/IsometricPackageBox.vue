@@ -47,7 +47,7 @@
 
     <!-- Faces -->
     <path
-      :d="createPath(frontFace, 4)"
+      :d="createPath(frontFace, frontCR)"
       :fill="`url(#frontGradient-${uid})`"
       :stroke="colors.stroke"
       stroke-width="1.2"
@@ -56,7 +56,7 @@
     />
 
     <path
-      :d="createPath(rightFace, 4)"
+      :d="createPath(rightFace, rightCR)"
       :fill="`url(#rightGradient-${uid})`"
       :stroke="colors.stroke"
       stroke-width="1.2"
@@ -65,7 +65,7 @@
     />
 
     <path
-      :d="createPath(topFace, 4)"
+      :d="createPath(topFace, topCR)"
       :fill="`url(#topGradient-${uid})`"
       :stroke="colors.stroke"
       stroke-width="1.2"
@@ -76,14 +76,14 @@
     <!-- Edge highlights -->
     <g stroke="rgba(255,255,255,0.4)" stroke-width="1.2" stroke-linecap="round" fill="none">
       <!-- Top edges -->
-      <line :x1="0" :y1="0" :x2="finalLength" :y2="0" />
-      <line :x1="finalLength" :y1="0" :x2="finalLength + depthOffset" :y2="-heightOffset" />
-      <line :x1="0" :y1="0" :x2="depthOffset" :y2="-heightOffset" />
+      <line :x1="xOrigin" :y1="yOrigin + yShift" :x2="xOrigin + finalLength" :y2="yOrigin + yShift" />
+      <line :x1="xOrigin + finalLength" :y1="yOrigin + yShift" :x2="xOrigin + finalLength + depthOffset" :y2="yOrigin + yShift - heightOffset" />
+      <line :x1="xOrigin" :y1="yOrigin + yShift" :x2="xOrigin + depthOffset" :y2="yOrigin + yShift - heightOffset" />
 
       <!-- Vertical edges -->
-      <line :x1="0" :y1="0" :x2="0" :y2="finalHeight" />
-      <line :x1="finalLength" :y1="0" :x2="finalLength" :y2="finalHeight" />
-      <line :x1="finalLength + depthOffset" :y1="-heightOffset" :x2="finalLength + depthOffset" :y2="finalHeight - heightOffset" />
+      <line :x1="xOrigin" :y1="yOrigin + yShift" :x2="xOrigin" :y2="yOrigin + yShift + finalHeight" />
+      <line :x1="xOrigin + finalLength" :y1="yOrigin + yShift" :x2="xOrigin + finalLength" :y2="yOrigin + yShift + finalHeight" />
+      <line :x1="xOrigin + finalLength + depthOffset" :y1="yOrigin + yShift - heightOffset" :x2="xOrigin + finalLength + depthOffset" :y2="yOrigin + yShift + (finalHeight - heightOffset)" />
     </g>
 
     <!-- Dimension labels (optional, disabled in modal usage) -->
@@ -124,9 +124,12 @@ const props = withDefaults(defineProps<{
   weight?: string
   showDimensions?: boolean
   size?: Size
+  scaleMode?: 'normalized' | 'absolute'
+  fitReference?: Dimensions
 }>(), {
   showDimensions: true,
-  size: 'medium'
+  size: 'medium',
+  scaleMode: 'normalized'
 })
 
 // Unique suffix for gradient/filter IDs to avoid collisions when multiple components render
@@ -141,19 +144,48 @@ const sizeConfig: Record<Size, { baseSize: number; iconSize: number; textSize: s
 const config = computed(() => sizeConfig[props.size])
 
 const maxDim = computed(() => Math.max(props.dimensions.length, props.dimensions.width, props.dimensions.height))
-const lengthRatio = computed(() => props.dimensions.length / maxDim.value)
-const widthRatio = computed(() => props.dimensions.width / maxDim.value)
-const heightRatio = computed(() => props.dimensions.height / maxDim.value)
+const lengthRatio = computed(() => props.dimensions.length / (maxDim.value || 1))
+const widthRatio = computed(() => props.dimensions.width / (maxDim.value || 1))
+const heightRatio = computed(() => props.dimensions.height / (maxDim.value || 1))
 
-const finalLength = computed(() => Math.round(config.value.baseSize * lengthRatio.value))
-const finalWidth  = computed(() => Math.round(config.value.baseSize * widthRatio.value))
-const finalHeight = computed(() => Math.round(config.value.baseSize * heightRatio.value))
+// px-per-cm depending on scale mode:
+// - normalized: largest dimension maps to baseSize
+// - absolute: cm are mapped to px using a size-based reference range so larger packages appear bigger
+const referenceCmMap: Record<Size, number> = { small: 35, medium: 70, large: 100 }
+const pxPerCm = computed(() => {
+  if (props.scaleMode === 'absolute') {
+    // Fit to a single reference dimensions set if provided (ensures consistent scale across a list)
+    const ref = props.fitReference ?? props.dimensions
+    const cos = perspectiveRatio
+    const sin = depthRatio
+    const fRef = ref.width   // front (Option B)
+    const dRef = ref.length  // depth (Option B)
+    const hRef = ref.height  // vertical
+    const padW = 8, padH = 8
+    const kW = (100 - padW) / Math.max(1, (fRef + dRef * cos))
+    const kH = (90 - padH) / Math.max(1, (hRef + dRef * sin))
+    // Use the smaller to fit both axes; clamp to reasonable bounds
+    return Math.max(0.2, Math.min(kW, kH))
+  }
+  // normalized
+  return config.value.baseSize / (maxDim.value || 1)
+})
 
-// Isometric projection parameters
-const perspectiveRatio = 0.8
-const depthRatio = 0.6
-const depthOffset = computed(() => Math.round(finalWidth.value * perspectiveRatio))
-const heightOffset = computed(() => Math.round(finalWidth.value * depthRatio))
+// Option B mapping: front = width, depth = length, vertical = height
+const finalLength = computed(() => Math.max(1, props.dimensions.width  * pxPerCm.value))
+const finalWidth  = computed(() => Math.max(1, props.dimensions.length * pxPerCm.value))
+const finalHeight = computed(() => Math.max(1, props.dimensions.height * pxPerCm.value))
+
+// Isometric projection parameters (45° axonometric)
+const perspectiveRatio = 0.70710678 // cos(45°)
+const depthRatio = 0.70710678       // sin(45°)
+const depthOffset = computed(() => finalWidth.value * perspectiveRatio)
+const heightOffset = computed(() => finalWidth.value * depthRatio)
+
+// Corner radii scaled to face sizes (kept small to avoid visible distortion)
+const frontCR = computed(() => Math.min(6, Math.max(0.5, Math.min(finalLength.value, finalHeight.value) * 0.06)))
+const rightCR = computed(() => Math.min(6, Math.max(0.5, Math.min(depthOffset.value, finalHeight.value) * 0.06)))
+const topCR = computed(() => Math.min(6, Math.max(0.5, Math.min(finalLength.value, depthOffset.value) * 0.06)))
 
 // Shadow
 const shadowOffset = 6
@@ -161,37 +193,47 @@ const shadowOpacity = 0.2
 
 // Face point arrays
 const frontFace = computed(() => ([
-  { x: 0, y: finalHeight.value },
-  { x: finalLength.value, y: finalHeight.value },
-  { x: finalLength.value, y: 0 },
-  { x: 0, y: 0 },
+  { x: xOrigin.value + 0, y: yOrigin.value + yShift.value + finalHeight.value },
+  { x: xOrigin.value + finalLength.value, y: yOrigin.value + yShift.value + finalHeight.value },
+  { x: xOrigin.value + finalLength.value, y: yOrigin.value + yShift.value + 0 },
+  { x: xOrigin.value + 0, y: yOrigin.value + yShift.value + 0 },
 ]))
 
 const rightFace = computed(() => ([
-  { x: finalLength.value, y: finalHeight.value },
-  { x: finalLength.value + depthOffset.value, y: finalHeight.value - heightOffset.value },
-  { x: finalLength.value + depthOffset.value, y: -heightOffset.value },
-  { x: finalLength.value, y: 0 },
+  { x: xOrigin.value + finalLength.value, y: yOrigin.value + yShift.value + finalHeight.value },
+  { x: xOrigin.value + finalLength.value + depthOffset.value, y: yOrigin.value + yShift.value + (finalHeight.value - heightOffset.value) },
+  { x: xOrigin.value + finalLength.value + depthOffset.value, y: yOrigin.value + yShift.value + (-heightOffset.value) },
+  { x: xOrigin.value + finalLength.value, y: yOrigin.value + yShift.value + 0 },
 ]))
 
 const topFace = computed(() => ([
-  { x: 0, y: 0 },
-  { x: finalLength.value, y: 0 },
-  { x: finalLength.value + depthOffset.value, y: -heightOffset.value },
-  { x: depthOffset.value, y: -heightOffset.value },
+  { x: xOrigin.value + 0, y: yOrigin.value + yShift.value + 0 },
+  { x: xOrigin.value + finalLength.value, y: yOrigin.value + yShift.value + 0 },
+  { x: xOrigin.value + finalLength.value + depthOffset.value, y: yOrigin.value + yShift.value + (-heightOffset.value) },
+  { x: xOrigin.value + depthOffset.value, y: yOrigin.value + yShift.value + (-heightOffset.value) },
 ]))
 
 const shadowPoints = computed(() => ([
-  { x: 0 + 0.3 * finalHeight.value, y: finalHeight.value + shadowOffset },
-  { x: finalLength.value + 0.3 * finalHeight.value, y: finalHeight.value + shadowOffset },
-  { x: finalLength.value + depthOffset.value + 0.3 * finalHeight.value, y: finalHeight.value - heightOffset.value + shadowOffset },
-  { x: depthOffset.value + 0.3 * finalHeight.value, y: finalHeight.value - heightOffset.value + shadowOffset },
+  { x: xOrigin.value + (0 + 0.3 * finalHeight.value), y: yOrigin.value + yShift.value + (finalHeight.value + shadowOffset) },
+  { x: xOrigin.value + (finalLength.value + 0.3 * finalHeight.value), y: yOrigin.value + yShift.value + (finalHeight.value + shadowOffset) },
+  { x: xOrigin.value + (finalLength.value + depthOffset.value + 0.3 * finalHeight.value), y: yOrigin.value + yShift.value + (finalHeight.value - heightOffset.value + shadowOffset) },
+  { x: xOrigin.value + (depthOffset.value + 0.3 * finalHeight.value), y: yOrigin.value + yShift.value + (finalHeight.value - heightOffset.value + shadowOffset) },
 ]))
 
-// ViewBox
-const svgWidth = computed(() => finalLength.value + depthOffset.value + 10)
-const svgHeight = computed(() => finalHeight.value + heightOffset.value + shadowOffset + 10)
-const viewBox = computed(() => `-5 ${-heightOffset.value - 5} ${svgWidth.value} ${svgHeight.value + shadowOffset}`)
+// Fixed ViewBox (absolute mode uses a constant canvas independent of size)
+const fixedWidth = computed(() => props.scaleMode === 'absolute'
+  ? 100
+  : config.value.baseSize * (1 + perspectiveRatio) + 20)
+const fixedHeight = computed(() => props.scaleMode === 'absolute'
+  ? 90
+  : config.value.baseSize * (1 + depthRatio) + shadowOffset + 20)
+const contentWidth = computed(() => finalLength.value + depthOffset.value)
+const contentHeight = computed(() => finalHeight.value + heightOffset.value + shadowOffset)
+const xOrigin = computed(() => (fixedWidth.value - contentWidth.value) / 2)
+// Shift Y so the top face sits at >= 0, and then center with yOrigin
+const yShift = computed(() => heightOffset.value)
+const yOrigin = computed(() => (fixedHeight.value - contentHeight.value) / 2)
+const viewBox = computed(() => `0 0 ${fixedWidth.value} ${fixedHeight.value}`)
 
 // Shape classification
 const packageType = computed(() => {

@@ -11,6 +11,23 @@ const routes: RouteRecordRaw[] = [
   { path: '/profile', name: 'profile', component: () => import('../views/ProfileView.vue') },
   { path: '/earnings', name: 'earnings', component: () => import('../views/EarningsView.vue') },
   { path: '/support', name: 'support', component: () => import('../views/SupportView.vue') },
+  {
+    path: '/menu',
+    name: 'menu',
+    component: () => import('../views/MobileMenuView.vue'),
+    beforeEnter: (to, from) => {
+      if (typeof window !== 'undefined') {
+        try {
+          const mql = window.matchMedia('(min-width: 1024px)')
+          if (mql.matches) {
+            const back = (to.query.redirect as string) || from.fullPath || '/'
+            return back.startsWith('/menu') ? '/' : back
+          }
+        } catch {}
+      }
+      return true
+    },
+  },
   // Dev/test view for public delivery endpoints
   { path: '/api-test', name: 'api-test', component: () => import('../views/DeliveryApiTestView.vue') },
 ]

@@ -23,7 +23,8 @@ export async function updateLocation(payload: {
   heading_deg?: number
   speed_kph?: number
 }) {
-  return http.post<{ status: string; recorded_at: string }>(`/drivers/api/location/`, payload)
+  const path = ((import.meta as any).env?.VITE_DRIVER_LOCATION_PATH as string) || '/drivers/api/location/'
+  return http.post<{ status: string; recorded_at: string }>(path, payload)
 }
 
 // GET /drivers/api/suggestions/

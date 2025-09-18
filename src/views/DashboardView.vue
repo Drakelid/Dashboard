@@ -1,8 +1,8 @@
 <template>
-  <section class="space-y-6 pb-10">
+  <section class="relative z-0 space-y-6 pb-10">
     <!-- Welcome / Summary Banner -->
-    <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-green-600 via-green-700 to-green-800 p-6 text-white">
-      <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div class="relative z-0 overflow-hidden rounded-2xl bg-gradient-to-r from-green-600 via-green-700 to-green-800 p-6 text-white">
+      <div class="relative z-0 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 class="text-2xl md:text-3xl font-bold mb-1">Good afternoon, John! 🌱</h1>
           <p class="text-green-100 text-sm md:text-base">
@@ -14,12 +14,12 @@
             <span class="opacity-90">Standard fee: <b>{{ quickStats.deliveryFee }}</b></span>
           </div>
         </div>
-        <div class="flex gap-3">
-          <button class="px-3 py-2 rounded-lg bg-white/20 hover:bg-white/30 border border-white/30 inline-flex items-center gap-2">
+        <div class="flex flex-wrap gap-3">
+          <button class="px-3 py-2 tap-target rounded-lg bg-white/20 hover:bg-white/30 border border-white/30 inline-flex items-center gap-2">
             <Map class="w-4 h-4" />
             <span>View Route</span>
           </button>
-          <button class="px-3 py-2 rounded-lg bg-white text-green-700 hover:bg-green-50 inline-flex items-center gap-2">
+          <button class="px-3 py-2 tap-target rounded-lg bg-white text-green-700 hover:bg-green-50 inline-flex items-center gap-2">
             <Play class="w-4 h-4" />
             <span>Start Next</span>
           </button>
@@ -33,28 +33,28 @@
     <!-- Tabs -->
     <div class="space-y-6">
       <!-- Tabs List -->
-      <div class="grid w-full grid-cols-4 bg-gray-100 p-1 rounded-lg">
+      <div class="relative z-30 isolate grid w-full grid-cols-2 sm:grid-cols-4 bg-gray-100 p-1 rounded-lg pointer-events-auto">
         <button 
           @click="tab = 'overview'" 
-          :class="['px-3 py-2 rounded-md text-sm font-medium transition-colors', tab === 'overview' ? 'bg-white shadow text-blue-600' : 'text-gray-600 hover:text-gray-900']"
+          :class="['px-3 py-2 tap-target rounded-md text-sm font-medium transition-colors', tab === 'overview' ? 'bg-white shadow text-blue-600' : 'text-gray-600 hover:text-gray-900']"
         >
           Overview
         </button>
         <button 
           @click="tab = 'analytics'" 
-          :class="['px-3 py-2 rounded-md text-sm font-medium transition-colors', tab === 'analytics' ? 'bg-white shadow text-blue-600' : 'text-gray-600 hover:text-gray-900']"
+          :class="['px-3 py-2 tap-target rounded-md text-sm font-medium transition-colors', tab === 'analytics' ? 'bg-white shadow text-blue-600' : 'text-gray-600 hover:text-gray-900']"
         >
           Analytics
         </button>
         <button 
           @click="tab = 'tasks'" 
-          :class="['px-3 py-2 rounded-md text-sm font-medium transition-colors', tab === 'tasks' ? 'bg-white shadow text-blue-600' : 'text-gray-600 hover:text-gray-900']"
+          :class="['px-3 py-2 tap-target rounded-md text-sm font-medium transition-colors', tab === 'tasks' ? 'bg-white shadow text-blue-600' : 'text-gray-600 hover:text-gray-900']"
         >
           Tasks
         </button>
         <button 
           @click="tab = 'achievements'" 
-          :class="['px-3 py-2 rounded-md text-sm font-medium transition-colors', tab === 'achievements' ? 'bg-white shadow text-blue-600' : 'text-gray-600 hover:text-gray-900']"
+          :class="['px-3 py-2 tap-target rounded-md text-sm font-medium transition-colors', tab === 'achievements' ? 'bg-white shadow text-blue-600' : 'text-gray-600 hover:text-gray-900']"
         >
           Achievements
         </button>
@@ -99,7 +99,7 @@
                   <div class="text-gray-500">{{ task.address }}</div>
                   <div class="flex items-center justify-between mt-2">
                     <div class="text-gray-500">{{ task.distance }}</div>
-                    <button class="h-8 px-3 text-xs rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-1.5">
+                    <button class="h-8 px-3 text-xs tap-target rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-1.5">
                       <Navigation class="w-3.5 h-3.5" />
                       <span>Navigate</span>
                     </button>
@@ -149,7 +149,7 @@
                 <div class="text-gray-500">{{ task.address }}</div>
                 <div class="flex items-center justify-between mt-2">
                   <div class="text-gray-500">{{ task.distance }}</div>
-                  <button class="h-8 px-3 text-xs rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-1.5">
+                  <button class="h-8 px-3 text-xs tap-target rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-1.5">
                     <Navigation class="w-3.5 h-3.5" />
                     <span>Navigate</span>
                   </button>

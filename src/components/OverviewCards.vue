@@ -1,19 +1,19 @@
 <template>
-  <section class="grid gap-3 md:gap-4 grid-cols-2 lg:grid-cols-4">
+  <section class="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
     <div
       v-for="(stat, index) in stats"
       :key="stat.title"
       class="relative overflow-hidden rounded-xl border bg-white shadow-sm hover:shadow-lg transition-all cursor-pointer"
     >
       <!-- Background gradient -->
-      <div :class="['absolute inset-0', stat.color]" />
+      <div :class="['absolute inset-0 pointer-events-none', stat.color]" />
 
       <!-- Accent line -->
-      <div :class="['absolute top-0 left-0 right-0 h-1', stat.accentColor]" />
+      <div :class="['absolute top-0 left-0 right-0 h-1 pointer-events-none', stat.accentColor]" />
 
       <!-- Progress indicator -->
       <div
-        class="absolute bottom-0 left-0 h-0.5 transition-all duration-700"
+        class="absolute bottom-0 left-0 h-0.5 transition-all duration-700 pointer-events-none"
         :class="stat.accentColor"
         :style="{ width: stat.progress + '%' }"
       />

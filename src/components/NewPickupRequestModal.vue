@@ -5,10 +5,10 @@
       <div class="absolute inset-0 bg-black/40 z-[2147483646]" @click="onClose" />
 
       <!-- Modal -->
-      <div class="absolute inset-0 flex items-center justify-center p-4 z-[2147483647]">
-        <section class="w-[380px] max-w-full rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 overflow-hidden z-[2147483647]">
+      <div class="absolute inset-0 flex items-stretch md:items-center justify-center p-0 md:p-4 z-[2147483647]">
+        <section class="w-full h-full md:w-[380px] md:h-auto rounded-none md:rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 overflow-hidden z-[2147483647] grid grid-rows-[auto_1fr_auto]" role="dialog" aria-modal="true" aria-label="New Pickup Request">
           <!-- Header -->
-          <header class="relative px-4 pt-4 pb-3">
+          <header class="sticky top-0 md:static relative px-4 pt-4 pb-3 bg-white/95 backdrop-blur border-b md:border-b-0" style="padding-top: max(env(safe-area-inset-top), 1rem); padding-right: calc(max(env(safe-area-inset-right), 0.5rem) + 48px)">
             <div class="flex items-start justify-between">
               <div class="flex items-center gap-2">
                 <span class="h-2 w-2 rounded-full bg-blue-500" />
@@ -16,15 +16,20 @@
               </div>
 
               <div class="flex items-center gap-2">
-                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-orange-50 text-orange-700 border border-orange-100">
-                  <span class="h-1 w-1 rounded-full bg-orange-500" />
-                  standard
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border"
+                      :class="priorityBadge">
+                  <span class="h-1 w-1 rounded-full" :class="priorityDot" />
+                  {{ request.priority }}
                 </span>
-                <button class="h-5 w-5 grid place-items-center rounded hover:bg-gray-50" aria-label="Close" @click="onClose">
-                  <X class="w-3 h-3" />
-                </button>
               </div>
             </div>
+            <!-- Absolute close button in top-right corner -->
+            <button class="absolute z-10 tap-target grid place-items-center rounded-full hover:bg-gray-50"
+                    aria-label="Close"
+                    @click="onClose"
+                    style="top: max(env(safe-area-inset-top), 0.5rem); right: max(env(safe-area-inset-right), 0.5rem); width: 44px; height: 44px;">
+              <X class="w-6 h-6" />
+            </button>
             <p class="text-xs text-gray-500 mt-1">A new delivery opportunity is available in your area</p>
             <div v-if="deliveryId != null" class="mt-1 text-xs text-gray-700">
               Delivery <span class="font-semibold">#{{ deliveryId }}</span>
@@ -32,39 +37,42 @@
           </header>
 
           <!-- Body -->
-          <div class="px-4 pb-4 space-y-4">
+          <div class="px-4 pb-4 space-y-4 overflow-y-auto min-h-0">
             <!-- Pickup / Dropoff -->
-            <div class="grid grid-cols-2 gap-4 relative">
-              <div class="space-y-0.5">
+            <div class="relative">
+              <div class="grid grid-cols-2 items-start gap-x-3 gap-y-0.5">
+                <!-- Row 1: Labels -->
                 <div class="flex items-center gap-1.5 text-blue-600 font-medium text-xs">
                   <Truck class="w-3.5 h-3.5" />
                   <span>Pickup from:</span>
                 </div>
-                <div class="font-semibold text-sm">{{ request.pickup.name }}</div>
-                <div class="text-xs text-gray-500">{{ request.pickup.address }}</div>
-              </div>
-
-              <div class="space-y-0.5 text-right">
-                <div class="flex items-center justify-end gap-1.5 text-green-600 font-medium text-xs">
+                <div class="flex items-center justify-end gap-1.5 text-green-600 font-medium text-xs text-right">
                   <span>Deliver to:</span>
                   <Home class="w-3.5 h-3.5" />
                 </div>
-                <div class="font-semibold text-sm">{{ request.dropoff.name }}</div>
-                <div class="text-xs text-gray-500">{{ request.dropoff.address }}</div>
+
+                <!-- Row 2: Names -->
+                <div class="font-semibold text-sm truncate min-w-0" :title="request.pickup.name">{{ request.pickup.name }}</div>
+                <div class="font-semibold text-sm truncate min-w-0 text-right" :title="request.dropoff.name">{{ request.dropoff.name }}</div>
+
+                <!-- Row 3: Addresses -->
+                <div class="text-xs text-gray-500 truncate min-w-0" :title="request.pickup.address">{{ request.pickup.address }}</div>
+                <div class="text-xs text-gray-500 truncate min-w-0 text-right" :title="request.dropoff.address">{{ request.dropoff.address }}</div>
               </div>
 
-              <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-gray-300">
+              <!-- Center arrow -->
+              <div class="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-gray-300">
                 <ArrowRight class="w-3.5 h-3.5" />
               </div>
             </div>
 
             <!-- Metrics -->
-            <div class="grid grid-cols-2 gap-4">
-              <div class="text-center">
+            <div class="grid grid-cols-2 gap-4" v-if="(request.etaMinutes || 0) > 0 || (request.distanceKm || 0) > 0">
+              <div class="text-center" v-if="(request.etaMinutes || 0) > 0">
                 <div class="text-2xl font-bold text-blue-600">{{ request.etaMinutes }} min</div>
                 <div class="text-xs text-gray-500">Estimated Time</div>
               </div>
-              <div class="text-center">
+              <div class="text-center" v-if="(request.distanceKm || 0) > 0">
                 <div class="text-2xl font-bold text-purple-600">{{ request.distanceKm.toFixed(1) }} km</div>
                 <div class="text-xs text-gray-500">Distance</div>
               </div>
@@ -74,8 +82,8 @@
             <div v-if="packages && packages.length" class="border rounded-lg p-3 bg-gray-50">
               <div class="font-semibold text-sm mb-2">Packages ({{ packages.length }})</div>
               <ul class="space-y-2">
-                <li v-for="p in packages" :key="p.id" class="text-xs grid md:grid-cols-[1fr,auto] items-start gap-2">
-                  <div>
+                <li v-for="p in packages" :key="p.id" class="text-xs flex flex-nowrap items-start gap-3">
+                  <div class="order-1 flex-1 min-w-0 text-left">
                     <div class="font-medium text-gray-800">#{{ p.id }}<span v-if="p.description" class="text-gray-500"> — {{ p.description }}</span></div>
                     <div class="mt-1 flex flex-wrap gap-2">
                       <span v-if="p.weight != null" class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-gray-100 text-gray-700">
@@ -98,33 +106,44 @@
                       </span>
                       <span v-if="p.delivery_status" class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-green-50 text-green-700">
                         <span class="font-medium">Status:</span>
-                        <span>{{ p.delivery_status }}</span>
+                        <span>{{ formatStatus(p.delivery_status) }}</span>
                       </span>
                     </div>
+                  </div>
+                  <div class="order-2 h-16 w-[100px] flex-none flex items-center justify-center">
+                    <IsometricPackageBox
+                      v-if="hasDims(p)"
+                      class="w-full h-full"
+                      :dimensions="dimsForPackage(p)"
+                      :show-dimensions="false"
+                      :size="boxSizeForPackage(p)"
+                      scale-mode="absolute"
+                      :fit-reference="fitReferenceForList"
+                    />
                   </div>
                 </li>
               </ul>
             </div>
-            <div v-else class="border rounded-lg p-3 grid grid-cols-[1fr,90px] gap-4 items-center bg-gray-50">
-              <div class="space-y-0.5">
+            <div v-else class="border rounded-lg p-3 flex flex-row items-center gap-4 bg-gray-50">
+              <div class="order-1 flex-1 min-w-0 text-left">
                 <div class="font-semibold text-sm">Package Details</div>
-                <div class="text-xs text-gray-600">{{ request.dimensions }}</div>
-                <div class="text-xs flex items-center gap-1">
-                  <span class="inline-flex items-center gap-1 text-orange-700">
-                    <span class="h-1 w-1 rounded-full bg-orange-600"></span>
-                    {{ request.weightKg.toFixed(1) }}kg
-                  </span>
-                  <span class="text-gray-500">Volume {{ request.volumeL.toFixed(0) }}L</span>
-                </div>
+                <div v-if="request.dimensions" class="text-xs text-gray-600">{{ request.dimensions }}</div>
+                <div v-else class="text-xs text-gray-500 mt-0.5">Loading real package details…</div>
               </div>
-              <!-- 3D package illustration -->
-              <div class="h-16 w-full rounded-md relative overflow-hidden bg-gradient-to-br from-indigo-50 to-purple-100 border border-indigo-200">
+              <div v-if="request.dimensions" class="order-2 h-16 w-[100px] flex-none rounded-md relative overflow-hidden bg-gradient-to-br from-indigo-50 to-purple-100 border border-indigo-200">
                 <IsometricPackageBox
                   class="w-full h-full"
                   :dimensions="dimsForPreview"
                   :show-dimensions="false"
-                  size="small"
+                  :size="boxSizeForPreview()"
+                  scale-mode="absolute"
+                  :fit-reference="fitReferenceForList"
                 />
+              </div>
+              <div v-else class="order-2 h-6 w-6 flex-none rounded-full border border-gray-200 grid place-items-center text-gray-400" aria-hidden="true">
+                <svg class="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56" stroke-linecap="round" />
+                </svg>
               </div>
             </div>
 
@@ -137,23 +156,23 @@
             </div>
 
             <!-- Fee -->
-            <div class="rounded-lg bg-green-50 px-3 py-3 text-center border border-green-100">
-              <div class="text-2xl font-bold text-green-700">{{ request.feeKr }} kr</div>
+            <div v-if="(request.feeKr || 0) > 0" class="rounded-lg bg-green-50 px-3 py-3 text-center border border-green-100">
+              <div class="text-2xl font-bold text-green-700">{{ Math.round(request.feeKr) }} kr</div>
               <div class="text-xs text-green-600">delivery fee</div>
             </div>
           </div>
 
           <!-- Footer -->
-          <footer class="px-4 pb-4 pt-2 flex items-center gap-2">
-            <button class="h-10 px-4 rounded-lg border bg-white hover:bg-gray-50 flex-1 flex items-center justify-center gap-1.5 font-medium text-gray-700" @click="onDecline">
+          <footer class="px-4 pb-4 pt-2 flex items-center gap-2 border-t md:border-t-0" style="padding-bottom: calc(env(safe-area-inset-bottom) + 1rem)">
+            <button class="h-10 px-4 tap-target rounded-lg border bg-white hover:bg-gray-50 flex-1 flex items-center justify-center gap-1.5 font-medium text-gray-700" @click="onDecline">
               <X class="w-3.5 h-3.5" />
               <span>Decline</span>
             </button>
-            <button v-if="deliveryId != null && (packages?.length || 0) > 0" class="h-10 px-4 rounded-lg bg-green-600 text-white hover:bg-green-700 flex-1 disabled:opacity-60 flex items-center justify-center gap-1.5 font-medium" :disabled="expired" @click="onAcceptAll">
+            <button v-if="deliveryId != null && (packages?.length || 0) > 0" class="h-10 px-4 tap-target rounded-lg bg-green-600 text-white hover:bg-green-700 flex-1 disabled:opacity-60 flex items-center justify-center gap-1.5 font-medium" :disabled="expired" @click="onAcceptAll">
               <Check class="w-3.5 h-3.5" />
               <span>Accept all</span>
             </button>
-            <button class="h-10 px-4 rounded-lg border bg-white text-gray-800 hover:bg-gray-50 flex-1 disabled:opacity-60 flex items-center justify-center gap-1.5 font-medium" :disabled="expired" @click="onAccept">
+            <button class="h-10 px-4 tap-target rounded-lg border bg-white text-gray-800 hover:bg-gray-50 flex-1 disabled:opacity-60 flex items-center justify-center gap-1.5 font-medium" :disabled="expired" @click="onAccept">
               <Check class="w-3.5 h-3.5" />
               <span>Accept</span>
             </button>
@@ -243,10 +262,16 @@ watch(
   (v) => {
     if (v) {
       startTimer(props.request.expiresInSeconds)
-      try { document.documentElement.classList.add('modal-open') } catch {}
+      try {
+        document.documentElement.classList.add('modal-open')
+        document.body.classList.add('modal-open')
+      } catch {}
     } else {
       stopTimer()
-      try { document.documentElement.classList.remove('modal-open') } catch {}
+      try {
+        document.documentElement.classList.remove('modal-open')
+        document.body.classList.remove('modal-open')
+      } catch {}
     }
   },
   { immediate: true }
@@ -254,7 +279,10 @@ watch(
 
 onUnmounted(() => {
   stopTimer()
-  try { document.documentElement.classList.remove('modal-open') } catch {}
+  try {
+    document.documentElement.classList.remove('modal-open')
+    document.body.classList.remove('modal-open')
+  } catch {}
 })
 
 function onClose() {
@@ -341,4 +369,100 @@ const parsedDimensions = computed(() => {
 
 // Directly feed L×W×H to IsometricPackageBox
 const dimsForPreview = computed(() => parsedDimensions.value)
+
+function boxSizeForPreview(): 'small' | 'medium' | 'large' {
+  const d = dimsForPreview.value
+  const maxDim = Math.max(d.length, d.width, d.height)
+  if (maxDim <= 35) return 'small'
+  if (maxDim <= 70) return 'medium'
+  return 'large'
+}
+
+// Use a shared fit reference so all package previews scale consistently
+const fitReferenceForList = computed(() => {
+  const list = props.packages || []
+  let maxL = 1, maxW = 1, maxH = 1
+  let found = false
+  for (const p of list) {
+    if (hasDims(p)) {
+      const d = dimsForPackage(p)
+      maxL = Math.max(maxL, d.length)
+      maxW = Math.max(maxW, d.width)
+      maxH = Math.max(maxH, d.height)
+      found = true
+    }
+  }
+  if (found) return { length: maxL, width: maxW, height: maxH }
+  const d = dimsForPreview.value
+  return { length: d.length, width: d.width, height: d.height }
+})
+
+// --- Helpers for per-package isometric previews ---
+function hasDims(p: any): boolean {
+  return p && p.length != null && p.width != null && p.height != null &&
+    !isNaN(parseMaybeNumber(p.length)) && !isNaN(parseMaybeNumber(p.width)) && !isNaN(parseMaybeNumber(p.height))
+}
+
+function parseMaybeNumber(v: any): number {
+  if (typeof v === 'number') return v
+  if (typeof v === 'string') {
+    const s = v.replace(/,(?=\d)/g, '.').trim()
+    const num = parseFloat(s)
+    return Number.isFinite(num) ? num : NaN
+  }
+  return NaN
+}
+
+function toCm(val: number, unit?: string): number {
+  const u = (unit || '').toLowerCase()
+  switch (u) {
+    case 'mm': return val / 10
+    case 'm': return val * 100
+    case 'in':
+    case 'inch':
+    case 'inches':
+      return val * 2.54
+    case 'cm':
+    default:
+      return val
+  }
+}
+
+function dimsForPackage(p: any): { length: number; width: number; height: number } {
+  // Prefer explicit dimension_unit on the package; otherwise assume cm
+  const unit = (p?.dimension_unit || '').toString()
+  const L = parseMaybeNumber(p?.length)
+  const W = parseMaybeNumber(p?.width)
+  const H = parseMaybeNumber(p?.height)
+  if (Number.isFinite(L) && Number.isFinite(W) && Number.isFinite(H)) {
+    return { length: Math.max(1, toCm(L, unit)), width: Math.max(1, toCm(W, unit)), height: Math.max(1, toCm(H, unit)) }
+  }
+  // Fallback to parsedDimensions from the text preview if available
+  const d = parsedDimensions.value
+  return { length: d.length, width: d.width, height: d.height }
+}
+
+function boxSizeForPackage(p: any): 'small' | 'medium' | 'large' {
+  const d = dimsForPackage(p)
+  const maxDim = Math.max(d.length, d.width, d.height) // in cm
+  if (maxDim <= 35) return 'small'
+  if (maxDim <= 70) return 'medium'
+  return 'large'
+}
+
+function formatStatus(s?: string): string {
+  return String(s || '').replace(/_/g, ' ')
+}
 </script>
+
+<style>
+/* Lock background scroll when modal is open */
+html.modal-open, body.modal-open { overflow: hidden; }
+
+/* When modal is open, ensure the app's top nav (header.glass-effect) is behind the modal */
+html.modal-open header.glass-effect {
+  z-index: 0 !important;
+  pointer-events: none !important;
+  backdrop-filter: none !important;
+}
+</style>
