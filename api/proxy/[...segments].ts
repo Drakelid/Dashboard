@@ -55,10 +55,12 @@ export default async function handler(req: any, res: any) {
     headers['origin'] = TARGET
     headers['referer'] = TARGET
 
+    // Ensure BodyInit type compatibility by wrapping binary body in a Blob when present
+    const bodyInit = body ? (typeof Blob !== 'undefined' ? new Blob([body]) : (body as any)) : undefined
     const upstreamRes = await fetch(upstreamUrl, {
       method: req.method,
       headers,
-      body: body,
+      body: bodyInit as any,
       redirect: 'manual',
     })
 
