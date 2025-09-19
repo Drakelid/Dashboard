@@ -120,6 +120,11 @@ export function hasCsrfCookie(): boolean {
 export async function primeCsrf(): Promise<void> {
   if (hasCsrfCookie()) return
   const candidates = [
+    // Known working endpoints on test should set CSRF cookie via middleware
+    '/api/auth/login/',
+    '/api/auth/login',
+    '/api/driver/profile/',
+    '/api/driver/profile',
     '/api/auth/csrf/',
     '/api/csrf/',
     '/dashboard/api/csrf/',
@@ -226,6 +231,16 @@ async function request<T>(method: HttpMethod, path: string, body?: any, opts: Re
   const { res, data } = await doFetch(0)
 
   if (!res.ok) {
+    // Surface proxy debug headers if present to help diagnose in production
+    try {
+      const upstream = res.headers.get('x-proxy-upstream-url') || res.headers.get('X-Proxy-Upstream-Url')
+      const target = res.headers.get('x-proxy-target-origin') || res.headers.get('X-Proxy-Target-Origin')
+      const reqMethod = res.headers.get('x-proxy-request-method') || res.headers.get('X-Proxy-Request-Method')
+      if (upstream || target) {
+        // eslint-disable-next-line no-console
+        console.warn('[proxy]', res.status, reqMethod || method, 'path:', path, 'upstream:', upstream, 'target:', target)
+      }
+    } catch {}
     const msg = (data && (data.detail || data.message)) || res.statusText || 'Request failed'
     // In cookie mode, treat 401/403 as unauthorized. Also treat 404 from auth resources as unauthorized
     const isAuthResource = (
