@@ -22,8 +22,18 @@ function normalize(p: string): string {
 function candidatePaths(kind: 'profile' | 'deliveries'): string[] {
   const envPath = kind === 'profile' ? ENV_DRIVER_PROFILE_PATH : ENV_DRIVER_DELIVERIES_PATH
   const defaults = kind === 'profile'
-    ? [normalize(`${PREFIX}/profile`), normalize(`${ALT_PREFIX}/profile`), '/api/profile/']
-    : [normalize(`${PREFIX}/deliveries`), normalize(`${ALT_PREFIX}/deliveries`), '/api/driver-deliveries/']
+    ? [
+        normalize(`${PREFIX}/profile`),
+        normalize(`${ALT_PREFIX}/profile`),
+        '/drivers/api/profile/',
+        '/api/profile/',
+      ]
+    : [
+        normalize(`${PREFIX}/deliveries`),
+        normalize(`${ALT_PREFIX}/deliveries`),
+        '/drivers/api/deliveries/',
+        '/api/driver-deliveries/',
+      ]
   const list = [envPath ? normalize(envPath) : undefined, ...defaults].filter(Boolean) as string[]
   // Deduplicate
   return Array.from(new Set(list))
