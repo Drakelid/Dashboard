@@ -23,10 +23,7 @@ export async function login(payload: LoginRequest): Promise<User> {
   const candidates = [
     ...(ENV_AUTH_LOGIN_PATH ? withToggle(ENV_AUTH_LOGIN_PATH) : []),
     ...withToggle('/api/auth/login/'),
-    ...withToggle('/dashboard/api/auth/login/'),
     ...withToggle('/auth/login/'),
-    ...withToggle('/api/login/'),
-    ...withToggle('/login/'),
   ]
   return postFirstOk<User>(candidates, payload)
 }
@@ -36,10 +33,7 @@ export async function logout(): Promise<{ detail: string } | Record<string, unkn
   const candidates = [
     ...(ENV_AUTH_LOGOUT_PATH ? withToggle(ENV_AUTH_LOGOUT_PATH) : []),
     ...withToggle('/api/auth/logout/'),
-    ...withToggle('/dashboard/api/auth/logout/'),
     ...withToggle('/auth/logout/'),
-    ...withToggle('/api/logout/'),
-    ...withToggle('/logout/'),
   ]
   return postFirstOk(candidates)
 }
@@ -49,10 +43,7 @@ export async function signup(payload: SignupRequest): Promise<User> {
   const candidates = [
     ...(ENV_AUTH_SIGNUP_PATH ? withToggle(ENV_AUTH_SIGNUP_PATH) : []),
     ...withToggle('/api/auth/signup/'),
-    ...withToggle('/dashboard/api/auth/signup/'),
     ...withToggle('/auth/signup/'),
-    ...withToggle('/api/signup/'),
-    ...withToggle('/signup/'),
   ]
   return postFirstOk<User>(candidates, payload)
 }
@@ -62,10 +53,7 @@ export async function changePassword(payload: ChangePasswordRequest): Promise<{ 
   const candidates = [
     ...(ENV_AUTH_CHANGE_PASSWORD_PATH ? withToggle(ENV_AUTH_CHANGE_PASSWORD_PATH) : []),
     ...withToggle('/api/auth/change-password/'),
-    ...withToggle('/dashboard/api/auth/change-password/'),
     ...withToggle('/auth/change-password/'),
-    ...withToggle('/api/change-password/'),
-    ...withToggle('/change-password/'),
   ]
   return postFirstOk(candidates, payload)
 }
