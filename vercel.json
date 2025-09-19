@@ -4,6 +4,9 @@
   "framework": "vite",
   "devCommand": "npm run dev",
   "rewrites": [
+    { "source": "/auth", "destination": "/api/proxy/auth" },
+    { "source": "/auth/", "destination": "/api/proxy/auth" },
+    { "source": "/auth/:path*", "destination": "/api/proxy/auth/:path*" },
     { "source": "/api", "destination": "/api/proxy/api" },
     { "source": "/api/", "destination": "/api/proxy/api" },
     { "source": "/api/:path*", "destination": "/api/proxy/api/:path*" },

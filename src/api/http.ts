@@ -45,12 +45,12 @@ function buildUrl(path: string, query?: Record<string, any>) {
   // On Vercel (host ends with .vercel.app), prefer same-origin so rewrites in vercel.json apply and avoid CORS entirely.
   const host = (typeof window !== 'undefined' && window.location?.hostname) ? window.location.hostname : ''
   const forceRelative = host.endsWith('.vercel.app') || (((import.meta as any).env?.VITE_FORCE_RELATIVE_API ?? '').toString().toLowerCase() === 'true')
+  const forceProxyPath = (((import.meta as any).env?.VITE_FORCE_PROXY_PATH ?? '').toString().toLowerCase() === 'true') || (((import.meta as any).env?.VITE_FORCE_PROXY_PATH ?? '').toString() === '1')
   if (!API_BASE_URL || forceRelative) {
     const origin = (typeof window !== 'undefined' && window.location?.origin) ? window.location.origin : 'http://localhost'
-    // On Vercel, RELY ON rewrites defined in vercel.json.
-    // Do NOT prefix with /api/proxy here, otherwise the /api/:path* rewrite
-    // will match and produce /api/proxy/api/proxy/... leading to upstream 404s.
-    url = new URL(clean, origin)
+    // By default rely on rewrites; but allow forcing direct function path via env toggle.
+    const pathToUse = (forceProxyPath && !clean.startsWith('/api/proxy')) ? `/api/proxy${clean}` : clean
+    url = new URL(pathToUse, origin)
   } else {
     const base = API_BASE_URL.replace(/\/$/, '')
     url = new URL(base + clean)
