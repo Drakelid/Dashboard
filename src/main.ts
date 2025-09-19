@@ -18,10 +18,12 @@ setUnauthorizedHandler(() => {
 const apiKey = (import.meta as any).env?.VITE_API_KEY
 const disableCsrfPrimeEnv = ((import.meta as any).env?.VITE_DISABLE_CSRF_PRIME ?? '').toString().toLowerCase() === 'true'
 const isVercelHost = typeof window !== 'undefined' && window.location?.hostname.endsWith('.vercel.app')
+const authMode = ((import.meta as any).env?.VITE_AUTH_MODE ?? '').toString().toLowerCase()
+const preferApiKey = authMode === 'api-key'
 
 async function preflightAuth() {
-  // Attach Api-Key globally when provided (dev/testing)
-  if (apiKey) setDefaultAuth({ apiKey })
+  // Attach Api-Key globally only when explicitly requested and not on Vercel
+  if (apiKey && preferApiKey && !isVercelHost) setDefaultAuth({ apiKey })
 
   // Prime CSRF early to help cookie auth flows, but skip on Vercel or when using API key
   if (!apiKey && !disableCsrfPrimeEnv && !isVercelHost) {

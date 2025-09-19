@@ -39,7 +39,10 @@ loadFromSession()
 
 const allowBasicFallback = ((import.meta as any).env?.VITE_ALLOW_BASIC ?? '').toString().toLowerCase() === 'true' || ((import.meta as any).env?.VITE_ALLOW_BASIC ?? '').toString() === '1'
 const loginBasicFirst = ((import.meta as any).env?.VITE_LOGIN_BASIC_FIRST ?? '').toString().toLowerCase() === 'true' || ((import.meta as any).env?.VITE_LOGIN_BASIC_FIRST ?? '').toString() === '1'
-const apiKeyEnv = (import.meta as any).env?.VITE_API_KEY as string | undefined
+const authMode = ((import.meta as any).env?.VITE_AUTH_MODE ?? '').toString().toLowerCase()
+const isVercelHost = typeof window !== 'undefined' && window.location?.hostname.endsWith('.vercel.app')
+const preferApiKey = authMode === 'api-key'
+const forceBasic = authMode === 'basic' || isVercelHost
 
 async function bootstrapFromApi(): Promise<User | null> {
   try {
@@ -58,8 +61,8 @@ async function login(payload: LoginRequest, opts?: { mode?: 'cookie' | 'basic' |
   loading.value = true
   error.value = null
   try {
-    // If an API key is present, skip and validate by fetching profile
-    if (apiKeyEnv) {
+    // If explicitly in API-key mode (and not forcing basic), validate by fetching profile
+    if (preferApiKey && !forceBasic) {
       const u = await bootstrapFromApi()
       if (!u) throw new Error('Invalid API key or insufficient permissions')
       return u
@@ -77,8 +80,9 @@ async function login(payload: LoginRequest, opts?: { mode?: 'cookie' | 'basic' |
       return u
     }
 
-    // Auto mode: respect env toggle for first attempt
-    if (mode === 'auto' && allowBasicFallback && loginBasicFirst) {
+    // Auto mode: prefer Basic first on Vercel or when configured via env
+    const doBasicFirst = mode === 'auto' && (forceBasic || (allowBasicFallback && loginBasicFirst))
+    if (doBasicFirst) {
       try {
         const driver: Driver = await apiGetProfile({
           auth: { basic: { username: payload.email, password: payload.password } },
@@ -89,7 +93,11 @@ async function login(payload: LoginRequest, opts?: { mode?: 'cookie' | 'basic' |
         saveToSession()
         return u
       } catch {
-        // fall through to cookie login
+        if (forceBasic) {
+          // On Vercel or explicit basic mode, do not attempt cookie login
+          throw new Error('Basic authentication failed')
+        }
+        // otherwise fall through to cookie login
       }
     }
 
