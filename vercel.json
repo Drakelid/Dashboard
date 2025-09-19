@@ -9,6 +9,9 @@
     }
   },
   "rewrites": [
+    { "source": "/api/proxy", "destination": "/api/proxy" },
+    { "source": "/api/proxy/", "destination": "/api/proxy" },
+    { "source": "/api/proxy/:path*", "destination": "/api/proxy/:path*" },
     { "source": "/auth", "destination": "/api/proxy/auth" },
     { "source": "/auth/", "destination": "/api/proxy/auth" },
     { "source": "/auth/:path*", "destination": "/api/proxy/auth/:path*" },
