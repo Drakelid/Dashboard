@@ -7,7 +7,13 @@ function buildUpstreamUrl(req: any): string {
   const idx = url.indexOf('/api/proxy')
   const tail = idx >= 0 ? url.slice(idx + '/api/proxy'.length) : url
   // Ensure we have a leading slash for the path portion
-  const originalPathAndQuery = tail.startsWith('/') ? tail : ('/' + tail)
+  let originalPathAndQuery = tail.startsWith('/') ? tail : ('/' + tail)
+  // If further rewrites injected an extra '/api/proxy' into the tail, strip it to avoid double-proxying upstream
+  const proxyPrefix = '/api/proxy'
+  while (originalPathAndQuery.startsWith(proxyPrefix + '/')) {
+    originalPathAndQuery = originalPathAndQuery.slice(proxyPrefix.length)
+    if (!originalPathAndQuery.startsWith('/')) originalPathAndQuery = '/' + originalPathAndQuery
+  }
   return TARGET.replace(/\/$/, '') + originalPathAndQuery
 }
 
@@ -37,6 +43,24 @@ async function readRawBody(req: any): Promise<Uint8Array | undefined> {
 export default async function handler(req: any, res: any) {
   try {
     const upstreamUrl = buildUpstreamUrl(req)
+
+    // Built-in debug endpoint: any request path ending with /__debug returns proxy status
+    try {
+      const urlStr = req.url || '/'
+      const qIndex = urlStr.indexOf('?')
+      const onlyPath = qIndex >= 0 ? urlStr.slice(0, qIndex) : urlStr
+      const start = onlyPath.indexOf('/api/proxy')
+      const tail = start >= 0 ? onlyPath.slice(start + '/api/proxy'.length) : onlyPath
+      if (tail.endsWith('/__debug')) {
+        res.statusCode = 200
+        res.setHeader('content-type', 'application/json')
+        res.setHeader('x-proxy-function', 'active')
+        res.setHeader('x-proxy-target-origin', TARGET)
+        res.setHeader('Access-Control-Expose-Headers', 'x-proxy-function, x-proxy-target-origin')
+        res.end(JSON.stringify({ ok: true, target: TARGET, tail }))
+        return
+      }
+    } catch {}
 
     const body = await readRawBody(req)
 

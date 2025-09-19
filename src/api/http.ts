@@ -47,11 +47,10 @@ function buildUrl(path: string, query?: Record<string, any>) {
   const forceRelative = host.endsWith('.vercel.app') || (((import.meta as any).env?.VITE_FORCE_RELATIVE_API ?? '').toString().toLowerCase() === 'true')
   if (!API_BASE_URL || forceRelative) {
     const origin = (typeof window !== 'undefined' && window.location?.origin) ? window.location.origin : 'http://localhost'
-    // On Vercel, call the proxy function directly to avoid depending on rewrites
-    const withProxy = host.endsWith('.vercel.app')
-      ? (clean.startsWith('/api/proxy') ? clean : `/api/proxy${clean}`)
-      : clean
-    url = new URL(withProxy, origin)
+    // On Vercel, RELY ON rewrites defined in vercel.json.
+    // Do NOT prefix with /api/proxy here, otherwise the /api/:path* rewrite
+    // will match and produce /api/proxy/api/proxy/... leading to upstream 404s.
+    url = new URL(clean, origin)
   } else {
     const base = API_BASE_URL.replace(/\/$/, '')
     url = new URL(base + clean)

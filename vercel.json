@@ -4,7 +4,6 @@
   "framework": "vite",
   "devCommand": "npm run dev",
   "rewrites": [
-    { "source": "/api/proxy/:path*", "destination": "/api/proxy/:path*" },
     { "source": "/api", "destination": "/api/proxy/api" },
     { "source": "/api/", "destination": "/api/proxy/api" },
     { "source": "/api/:path*", "destination": "/api/proxy/api/:path*" },
