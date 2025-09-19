@@ -66,12 +66,39 @@ export default async function handler(req: any, res: any) {
 
     // Copy status and selected headers through
     res.statusCode = upstreamRes.status
+    const passthrough = new Set(['content-type', 'content-length', 'location', 'cache-control', 'vary'])
     upstreamRes.headers.forEach((v, k) => {
-      // Pass through important headers
-      if (['content-type', 'content-length', 'set-cookie', 'location', 'cache-control', 'vary'].includes(k.toLowerCase())) {
+      const key = k.toLowerCase()
+      if (key === 'set-cookie') return // handle separately below
+      if (passthrough.has(key)) {
         res.setHeader(k, v)
       }
     })
+
+    // Handle Set-Cookie specially: rewrite Domain to current host so browser stores cookies for our origin
+    const hostHeader = (req.headers['x-forwarded-host'] || req.headers['host'] || '') as string
+    const currentHost = Array.isArray(hostHeader) ? hostHeader[0] : hostHeader
+    let setCookies: string[] = []
+    const anyHeaders: any = upstreamRes.headers as any
+    if (typeof anyHeaders.getSetCookie === 'function') {
+      setCookies = anyHeaders.getSetCookie()
+    } else if (typeof anyHeaders.raw === 'function') {
+      const raw = anyHeaders.raw()
+      if (raw && raw['set-cookie']) setCookies = raw['set-cookie'] as string[]
+    } else {
+      const sc = upstreamRes.headers.get('set-cookie')
+      if (sc) setCookies = [sc]
+    }
+    if (setCookies.length) {
+      const rewritten = setCookies.map((c) => {
+        // Remove Domain attribute so it defaults to our current host
+        let out = c.replace(/;\s*Domain=[^;]*/i, '')
+        // Optionally, ensure Path=/ so it is sent on our routes
+        if (!/;\s*Path=/i.test(out)) out += '; Path=/'
+        return out
+      })
+      res.setHeader('Set-Cookie', rewritten)
+    }
 
     const ab = await upstreamRes.arrayBuffer()
     const out = new Uint8Array(ab)

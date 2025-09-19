@@ -42,7 +42,7 @@ const loginBasicFirst = ((import.meta as any).env?.VITE_LOGIN_BASIC_FIRST ?? '')
 const authMode = ((import.meta as any).env?.VITE_AUTH_MODE ?? '').toString().toLowerCase()
 const isVercelHost = typeof window !== 'undefined' && window.location?.hostname.endsWith('.vercel.app')
 const preferApiKey = authMode === 'api-key'
-const forceBasic = authMode === 'basic' || isVercelHost
+const forceCookie = authMode === 'cookie' || isVercelHost
 
 async function bootstrapFromApi(): Promise<User | null> {
   try {
@@ -61,8 +61,8 @@ async function login(payload: LoginRequest, opts?: { mode?: 'cookie' | 'basic' |
   loading.value = true
   error.value = null
   try {
-    // If explicitly in API-key mode (and not forcing basic), validate by fetching profile
-    if (preferApiKey && !forceBasic) {
+    // If explicitly in API-key mode (and not forcing cookie), validate by fetching profile
+    if (preferApiKey && !forceCookie) {
       const u = await bootstrapFromApi()
       if (!u) throw new Error('Invalid API key or insufficient permissions')
       return u
@@ -80,8 +80,8 @@ async function login(payload: LoginRequest, opts?: { mode?: 'cookie' | 'basic' |
       return u
     }
 
-    // Auto mode: prefer Basic first on Vercel or when configured via env
-    const doBasicFirst = mode === 'auto' && (forceBasic || (allowBasicFallback && loginBasicFirst))
+    // Auto mode: only try Basic-first when cookie is NOT forced
+    const doBasicFirst = mode === 'auto' && (!forceCookie && (allowBasicFallback && loginBasicFirst))
     if (doBasicFirst) {
       try {
         const driver: Driver = await apiGetProfile({
@@ -93,11 +93,7 @@ async function login(payload: LoginRequest, opts?: { mode?: 'cookie' | 'basic' |
         saveToSession()
         return u
       } catch {
-        if (forceBasic) {
-          // On Vercel or explicit basic mode, do not attempt cookie login
-          throw new Error('Basic authentication failed')
-        }
-        // otherwise fall through to cookie login
+        // Fall through to cookie login
       }
     }
 
