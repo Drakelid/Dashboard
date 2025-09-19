@@ -228,8 +228,15 @@ async function request<T>(method: HttpMethod, path: string, body?: any, opts: Re
 
   if (!res.ok) {
     const msg = (data && (data.detail || data.message)) || res.statusText || 'Request failed'
-    // In cookie mode, any 401/403 should be treated as unauthorized
-    const shouldUnauthorized = !hasAuthHeader && (res.status === 401 || res.status === 403)
+    // In cookie mode, treat 401/403 as unauthorized. Also treat 404 from auth resources as unauthorized
+    const isAuthResource = (
+      path.includes('/driver/profile') ||
+      path.includes('/driver/deliveries') ||
+      path.includes('/users/me') ||
+      path.endsWith('/api/profile') || path.endsWith('/api/profile/') ||
+      path.includes('/auth/user')
+    )
+    const shouldUnauthorized = !hasAuthHeader && (res.status === 401 || res.status === 403 || (res.status === 404 && isAuthResource))
     if (shouldUnauthorized && onUnauthorized) onUnauthorized()
     throw new HttpError(res.status, msg, data)
   }

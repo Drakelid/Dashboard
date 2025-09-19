@@ -61,6 +61,16 @@ async function login(payload: LoginRequest, opts?: { mode?: 'cookie' | 'basic' |
   loading.value = true
   error.value = null
   try {
+    // Always force cookie mode on Vercel or when explicitly configured
+    if (forceCookie) {
+      await primeCsrf().catch(() => {})
+      const u = await apiLogin(payload)
+      setDefaultAuth(undefined)
+      user.value = u
+      saveToSession()
+      return u
+    }
+
     // If explicitly in API-key mode (and not forcing cookie), validate by fetching profile
     if (preferApiKey && !forceCookie) {
       const u = await bootstrapFromApi()
