@@ -72,6 +72,19 @@ export default async function handler(req: any, res: any) {
     res.setHeader('x-proxy-upstream-url', upstreamUrl)
     res.setHeader('x-proxy-target-origin', TARGET)
     res.setHeader('x-proxy-request-method', req.method || '')
+    const expose = 'x-proxy-upstream-url, x-proxy-target-origin, x-proxy-request-method'
+    const existingExpose = res.getHeader('access-control-expose-headers')
+    if (existingExpose) {
+      const merged = String(existingExpose)
+        .split(',')
+        .map(s => s.trim().toLowerCase())
+        .concat(expose.split(',').map(s => s.trim().toLowerCase()))
+        .filter((v, i, a) => v && a.indexOf(v) === i)
+        .join(', ')
+      res.setHeader('Access-Control-Expose-Headers', merged)
+    } else {
+      res.setHeader('Access-Control-Expose-Headers', expose)
+    }
 
     upstreamRes.headers.forEach((v, k) => {
       const key = k.toLowerCase()

@@ -63,12 +63,31 @@ async function login(payload: LoginRequest, opts?: { mode?: 'cookie' | 'basic' |
   try {
     // Always force cookie mode on Vercel or when explicitly configured
     if (forceCookie) {
-      await primeCsrf().catch(() => {})
-      const u = await apiLogin(payload)
-      setDefaultAuth(undefined)
-      user.value = u
-      saveToSession()
-      return u
+      try {
+        await primeCsrf().catch(() => {})
+        const u = await apiLogin(payload)
+        setDefaultAuth(undefined)
+        user.value = u
+        saveToSession()
+        return u
+      } catch (e: any) {
+        // If the session login endpoint is missing (404), fall back to Basic auth automatically
+        if (e?.status === 404) {
+          try {
+            const driver: Driver = await apiGetProfile({
+              auth: { basic: { username: payload.email, password: payload.password } },
+            })
+            const u = driver.user
+            user.value = u
+            setDefaultAuth({ basic: { username: payload.email, password: payload.password } })
+            saveToSession()
+            return u
+          } catch (inner) {
+            throw e
+          }
+        }
+        throw e
+      }
     }
 
     // If explicitly in API-key mode (and not forcing cookie), validate by fetching profile
