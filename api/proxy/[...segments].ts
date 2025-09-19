@@ -67,6 +67,11 @@ export default async function handler(req: any, res: any) {
     // Copy status and selected headers through
     res.statusCode = upstreamRes.status
     const passthrough = new Set(['content-type', 'content-length', 'location', 'cache-control', 'vary'])
+    // Debug headers to help troubleshooting
+    res.setHeader('x-proxy-upstream-url', upstreamUrl)
+    res.setHeader('x-proxy-target-origin', TARGET)
+    res.setHeader('x-proxy-request-method', req.method || '')
+
     upstreamRes.headers.forEach((v, k) => {
       const key = k.toLowerCase()
       if (key === 'set-cookie') return // handle separately below
