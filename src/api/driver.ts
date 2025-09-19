@@ -4,13 +4,28 @@ import type { RequestOptions } from '@/api/http'
 
 // Canonical driver endpoints per backend OpenAPI: /api/driver/*
 const PREFIX = '/api/driver'
+const ALT_PREFIX = '/dashboard/api/driver'
 
 export async function listDeliveries(filter?: 'future' | 'past', opts?: RequestOptions): Promise<DriverDeliveryItem[]> {
-  return http.get<DriverDeliveryItem[]>(`${PREFIX}/deliveries/`, { ...(opts || {}), query: filter ? { filter } : undefined })
+  try {
+    return await http.get<DriverDeliveryItem[]>(`${PREFIX}/deliveries/`, { ...(opts || {}), query: filter ? { filter } : undefined })
+  } catch (e: any) {
+    if (e?.status === 404) {
+      return await http.get<DriverDeliveryItem[]>(`${ALT_PREFIX}/deliveries/`, { ...(opts || {}), query: filter ? { filter } : undefined })
+    }
+    throw e
+  }
 }
 
 export async function getProfile(opts?: RequestOptions): Promise<Driver> {
-  return http.get<Driver>(`${PREFIX}/profile/`, opts)
+  try {
+    return await http.get<Driver>(`${PREFIX}/profile/`, opts)
+  } catch (e: any) {
+    if (e?.status === 404) {
+      return await http.get<Driver>(`${ALT_PREFIX}/profile/`, opts)
+    }
+    throw e
+  }
 }
 
 // --- Extended driver endpoints (non-OpenAPI per api-map.txt) ---

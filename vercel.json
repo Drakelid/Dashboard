@@ -4,10 +4,15 @@
   "framework": "vite",
   "devCommand": "npm run dev",
   "rewrites": [
-    { "source": "/api/:path*", "destination": "https://test.sambring.no/api/:path*" },
-    { "source": "/dashboard/api/:path*", "destination": "https://test.sambring.no/dashboard/api/:path*" },
-    { "source": "/drivers/:path*", "destination": "https://test.sambring.no/drivers/:path*" },
-    { "source": "/deliveries/:path*", "destination": "https://test.sambring.no/deliveries/:path*" },
-    { "source": "/celery-progress/:path*", "destination": "https://test.sambring.no/celery-progress/:path*" }
+    { "source": "/api", "destination": "/api/proxy/api" },
+    { "source": "/api/", "destination": "/api/proxy/api" },
+    { "source": "/api/:path*", "destination": "/api/proxy/api/:path*" },
+    { "source": "/dashboard/api", "destination": "/api/proxy/dashboard/api" },
+    { "source": "/dashboard/api/", "destination": "/api/proxy/dashboard/api" },
+    { "source": "/dashboard/api/:path*", "destination": "/api/proxy/dashboard/api/:path*" },
+    { "source": "/drivers/:path*", "destination": "/api/proxy/drivers/:path*" },
+    { "source": "/deliveries/:path*", "destination": "/api/proxy/deliveries/:path*" },
+    { "source": "/celery-progress/:path*", "destination": "/api/proxy/celery-progress/:path*" },
+    { "source": "/sanctum/csrf-cookie", "destination": "/api/proxy/sanctum/csrf-cookie" }
   ]
 }

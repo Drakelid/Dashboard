@@ -4,16 +4,13 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 const TARGET = process.env.VITE_API_TARGET || 'https://test.sambring.no'
 
 function buildUpstreamUrl(req: VercelRequest): string {
-  const segmentsParam = (req.query.segments as string[] | string | undefined)
-  const segs = Array.isArray(segmentsParam)
-    ? segmentsParam
-    : (segmentsParam ? [segmentsParam] : [])
-
-  const path = '/' + segs.map(s => encodeURIComponent(s)).join('/')
-  // Preserve the original query string
-  const originalUrl = new URL(req.url || '/', 'http://local')
-  const search = originalUrl.search || ''
-  return TARGET.replace(/\/$/, '') + path + search
+  // Prefer taking the tail of the URL after /api/proxy to preserve trailing slashes exactly
+  const url = req.url || '/'
+  const idx = url.indexOf('/api/proxy')
+  const tail = idx >= 0 ? url.slice(idx + '/api/proxy'.length) : url
+  // Ensure we have a leading slash for the path portion
+  const originalPathAndQuery = tail.startsWith('/') ? tail : ('/' + tail)
+  return TARGET.replace(/\/$/, '') + originalPathAndQuery
 }
 
 async function readRawBody(req: VercelRequest): Promise<Buffer | undefined> {

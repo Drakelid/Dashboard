@@ -1,4 +1,5 @@
 import { http } from './http'
+import { getSuggestions } from './driver'
 import type { PackageDelivery, PackageDeliveryRequest, PackageStatusUpdate, PackageStatusUpdateRequest } from '@/types/api'
 
 export interface NearbyAssignment {
@@ -106,5 +107,26 @@ export async function fetchNearbyAssignments(opts?: { lat?: number; lng?: number
 }
 
 export async function getAvailablePackages(): Promise<UnassignedPackagesByDelivery[]> {
-  return http.get<UnassignedPackagesByDelivery[]>(`/api/packages/available_packages/`)
+  try {
+    return await http.get<UnassignedPackagesByDelivery[]>(`/api/packages/available_packages/`)
+  } catch (e: any) {
+    if (e?.status === 404) {
+      // Fallback: use driver suggestions and shape to groups with no package list
+      const suggestions = await getSuggestions().catch(() => []) as any[]
+      return (suggestions || []).map((s: any) => ({
+        delivery_id: s.delivery_id,
+        uuid: null,
+        receiver_name: undefined,
+        receiver_phone: undefined,
+        pickup_location: s.pickup_location || '',
+        pickup_latitude: s.pickup_latitude,
+        pickup_longitude: s.pickup_longitude,
+        delivery_location: s.delivery_location || '',
+        service: undefined,
+        price: undefined,
+        packages: [],
+      }))
+    }
+    throw e
+  }
 }
