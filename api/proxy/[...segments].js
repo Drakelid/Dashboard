@@ -1,5 +1,15 @@
-// Target API origin; can be overridden via env on Vercel if needed
-const TARGET = process.env.VITE_API_TARGET || 'https://test.sambring.no'
+// Target API origin; prefer explicit env overrides and fall back to test API
+const RAW_TARGET =
+  process.env.VITE_API_TARGET ||
+  process.env.VITE_API_BASE_URL ||
+  process.env.API_TARGET ||
+  process.env.API_BASE_URL ||
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  process.env.PUBLIC_API_BASE_URL ||
+  ''
+
+const TARGET_BASE = (RAW_TARGET && RAW_TARGET.trim().length ? RAW_TARGET : 'https://test.sambring.no').replace(/\/$/, '')
+const TARGET = TARGET_BASE
 
 function buildUpstreamUrl(req) {
   const url = req.url || '/'
@@ -11,7 +21,7 @@ function buildUpstreamUrl(req) {
     originalPathAndQuery = originalPathAndQuery.slice(proxyPrefix.length)
     if (!originalPathAndQuery.startsWith('/')) originalPathAndQuery = '/' + originalPathAndQuery
   }
-  return TARGET.replace(/\/$/, '') + originalPathAndQuery
+  return TARGET_BASE + originalPathAndQuery
 }
 
 async function readRawBody(req) {

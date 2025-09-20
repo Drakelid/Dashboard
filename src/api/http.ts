@@ -49,6 +49,7 @@ function buildUrl(path: string, query?: Record<string, any>, routingOverride?: '
   const origin = (typeof window !== 'undefined' && window.location?.origin) ? window.location.origin : 'http://localhost'
   const routing = (((import.meta as any).env?.VITE_API_ROUTING ?? '').toString().toLowerCase())
   const forceProxyEnv = (((import.meta as any).env?.VITE_FORCE_PROXY_PATH ?? '').toString().toLowerCase() === 'true') || (((import.meta as any).env?.VITE_FORCE_PROXY_PATH ?? '').toString() === '1')
+  const hasExplicitBase = typeof API_BASE_URL === 'string' && API_BASE_URL.trim().length > 0
 
   // Decide routing behavior
   let useProxyPath: boolean
@@ -56,7 +57,13 @@ function buildUrl(path: string, query?: Record<string, any>, routingOverride?: '
   else if (routingOverride === 'direct') useProxyPath = false
   else if (routing === 'proxy') useProxyPath = true
   else if (routing === 'direct') useProxyPath = false
-  else useProxyPath = host.endsWith('.vercel.app') || forceProxyEnv
+  else {
+    if (forceProxyEnv) useProxyPath = true
+    else {
+      const preferProxyHost = host.endsWith('.vercel.app') && !hasExplicitBase
+      useProxyPath = preferProxyHost
+    }
+  }
 
   if (useProxyPath) {
     const pathToUse = (!clean.startsWith('/api/proxy')) ? `/api/proxy${clean}` : clean
