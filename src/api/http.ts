@@ -1,5 +1,8 @@
 const IS_DEV = (import.meta as any).env?.DEV
-export const API_BASE_URL = IS_DEV ? '' : ((import.meta as any).env?.VITE_API_BASE_URL || '')
+// Prefer VITE_API_BASE_URL, otherwise fall back to VITE_API_TARGET for direct calls
+export const API_BASE_URL = IS_DEV
+  ? ''
+  : (((import.meta as any).env?.VITE_API_BASE_URL || (import.meta as any).env?.VITE_API_TARGET) || '')
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 
@@ -42,14 +45,19 @@ export function getDefaultAuthConfig(): RequestOptions['auth'] | undefined {
 function buildUrl(path: string, query?: Record<string, any>) {
   const clean = path.startsWith('/') ? path : `/${path}`
   let url: URL
-  // On Vercel (host ends with .vercel.app), prefer same-origin so rewrites in vercel.json apply and avoid CORS entirely.
   const host = (typeof window !== 'undefined' && window.location?.hostname) ? window.location.hostname : ''
-  const forceRelative = host.endsWith('.vercel.app') || (((import.meta as any).env?.VITE_FORCE_RELATIVE_API ?? '').toString().toLowerCase() === 'true')
-  const forceProxyPath = host.endsWith('.vercel.app') || (((import.meta as any).env?.VITE_FORCE_PROXY_PATH ?? '').toString().toLowerCase() === 'true') || (((import.meta as any).env?.VITE_FORCE_PROXY_PATH ?? '').toString() === '1')
-  if (!API_BASE_URL || forceRelative) {
-    const origin = (typeof window !== 'undefined' && window.location?.origin) ? window.location.origin : 'http://localhost'
-    // By default rely on rewrites; but allow forcing direct function path via env toggle.
-    const pathToUse = (forceProxyPath && !clean.startsWith('/api/proxy')) ? `/api/proxy${clean}` : clean
+  const origin = (typeof window !== 'undefined' && window.location?.origin) ? window.location.origin : 'http://localhost'
+  const routing = (((import.meta as any).env?.VITE_API_ROUTING ?? '').toString().toLowerCase())
+  const forceProxyEnv = (((import.meta as any).env?.VITE_FORCE_PROXY_PATH ?? '').toString().toLowerCase() === 'true') || (((import.meta as any).env?.VITE_FORCE_PROXY_PATH ?? '').toString() === '1')
+
+  // Decide routing behavior
+  let useProxyPath: boolean
+  if (routing === 'proxy') useProxyPath = true
+  else if (routing === 'direct') useProxyPath = false
+  else useProxyPath = host.endsWith('.vercel.app') || forceProxyEnv
+
+  if (useProxyPath) {
+    const pathToUse = (!clean.startsWith('/api/proxy')) ? `/api/proxy${clean}` : clean
     url = new URL(pathToUse, origin)
   } else {
     const base = API_BASE_URL.replace(/\/$/, '')
