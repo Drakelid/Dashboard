@@ -1,5 +1,5 @@
 import { http } from './http'
-import type { DriverDeliveryItem, Driver } from '@/types/api'
+import type { DriverDeliveryItem, Driver, Vehicle } from '@/types/api'
 import type { RequestOptions } from '@/api/http'
 
 // Allow environment overrides for driver endpoints
@@ -7,6 +7,7 @@ const ENV_DRIVER_PREFIX = ((import.meta as any).env?.VITE_DRIVER_PREFIX as strin
 const ENV_DRIVER_ALT_PREFIX = ((import.meta as any).env?.VITE_DRIVER_ALT_PREFIX as string | undefined)?.replace(/\/$/, '')
 const ENV_DRIVER_PROFILE_PATH = (import.meta as any).env?.VITE_DRIVER_PROFILE_PATH as string | undefined
 const ENV_DRIVER_DELIVERIES_PATH = (import.meta as any).env?.VITE_DRIVER_DELIVERIES_PATH as string | undefined
+const ENV_DRIVER_VEHICLE_PATH = (import.meta as any).env?.VITE_DRIVER_VEHICLE_PATH as string | undefined
 
 const PREFIX = ENV_DRIVER_PREFIX || '/api/driver'
 const ALT_PREFIX = ENV_DRIVER_ALT_PREFIX || '/dashboard/api/driver'
@@ -19,7 +20,20 @@ function normalize(p: string): string {
   return s
 }
 
-function candidatePaths(kind: 'profile' | 'deliveries'): string[] {
+type EndpointKind = 'profile' | 'deliveries' | 'vehicle'
+
+function candidatePaths(kind: EndpointKind): string[] {
+  if (kind === 'vehicle') {
+    const defaults = [
+      '/api/driver/profile/vehicle/',
+      '/dashboard/api/driver/profile/vehicle/',
+      normalize(`${PREFIX}/profile/vehicle`),
+      normalize(`${ALT_PREFIX}/profile/vehicle`),
+    ]
+    const explicit = ENV_DRIVER_VEHICLE_PATH ? [normalize(ENV_DRIVER_VEHICLE_PATH)] : []
+    return Array.from(new Set([...explicit, ...defaults]))
+  }
+
   const envPath = kind === 'profile' ? ENV_DRIVER_PROFILE_PATH : ENV_DRIVER_DELIVERIES_PATH
   const defaults = kind === 'profile'
     ? [
@@ -41,7 +55,6 @@ function candidatePaths(kind: 'profile' | 'deliveries'): string[] {
         '/drivers/api/driver/deliveries/',
       ]
   const list = [envPath ? normalize(envPath) : undefined, ...defaults].filter(Boolean) as string[]
-  // Deduplicate
   return Array.from(new Set(list))
 }
 
@@ -53,14 +66,12 @@ async function getFirstOk<T>(paths: string[], opts?: RequestOptions & { query?: 
     } catch (e: any) {
       lastErr = e
       if (e?.status !== 404) throw e
-      // Try toggling trailing slash once (some servers are strict about it)
       try {
         const toggled = p.endsWith('/') ? p.slice(0, -1) : (p + '/')
         return await http.get<T>(toggled, opts as any)
       } catch (e2: any) {
         lastErr = e2
         if (e2?.status !== 404) throw e2
-        // continue to next candidate
       }
     }
   }
@@ -75,6 +86,16 @@ export async function listDeliveries(filter?: 'future' | 'past', opts?: RequestO
 export async function getProfile(opts?: RequestOptions): Promise<Driver> {
   const paths = candidatePaths('profile')
   return getFirstOk<Driver>(paths, opts)
+}
+
+export async function getVehicle(opts?: RequestOptions): Promise<Vehicle | null> {
+  const paths = candidatePaths('vehicle')
+  try {
+    return await getFirstOk<Vehicle>(paths, opts)
+  } catch (e: any) {
+    if (e?.status === 404) return null
+    throw e
+  }
 }
 
 // --- Extended driver endpoints (non-OpenAPI per api-map.txt) ---

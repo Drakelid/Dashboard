@@ -14,17 +14,22 @@ export interface User {
 }
 
 export interface Vehicle {
+  id?: number
   make?: string
   model?: string
   color?: string
   license_plate?: string
-  type?: string // e.g., car, van
-  capacity?: number
-  weight_limit?: number
-  registration_year?: number
-  next_inspection_date?: string
-  engine_type?: 'gasoline' | 'diesel' | 'electric' | 'hybrid' | 'other'
+  type?: string
+  capacity?: number | null
+  maximum_total_weight_kg?: number | null
+  maximum_load_kg?: number | null
+  registration_year?: number | null
+  next_eu_control_date?: string | null
+  next_inspection_date?: string | null
+  engine_type?: 'gasoline' | 'diesel' | 'electric' | 'hybrid' | 'other' | null
+  notes?: string | null
 }
+
 
 export interface Driver {
   id: number
@@ -241,3 +246,4 @@ export interface DeliveryStatusResponse {
   updated_at: string
   packages: DeliveryStatusPackage[]
 }
+
