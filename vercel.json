@@ -3,27 +3,5 @@
   "outputDirectory": "build",
   "framework": "vite",
   "devCommand": "npm run dev",
-  "functions": {
-    "api/**/*.{js,ts}": {
-      "runtime": "nodejs20.x"
-    }
-  },
-  "rewrites": [
-    { "source": "/api/proxy", "destination": "/api/proxy" },
-    { "source": "/api/proxy/", "destination": "/api/proxy" },
-    { "source": "/api/proxy/:path*", "destination": "/api/proxy/:path*" },
-    { "source": "/auth", "destination": "/api/proxy/auth" },
-    { "source": "/auth/", "destination": "/api/proxy/auth" },
-    { "source": "/auth/:path*", "destination": "/api/proxy/auth/:path*" },
-    { "source": "/api", "destination": "/api/proxy/api" },
-    { "source": "/api/", "destination": "/api/proxy/api" },
-    { "source": "/api/:path*", "destination": "/api/proxy/api/:path*" },
-    { "source": "/dashboard/api", "destination": "/api/proxy/dashboard/api" },
-    { "source": "/dashboard/api/", "destination": "/api/proxy/dashboard/api" },
-    { "source": "/dashboard/api/:path*", "destination": "/api/proxy/dashboard/api/:path*" },
-    { "source": "/drivers/:path*", "destination": "/api/proxy/drivers/:path*" },
-    { "source": "/deliveries/:path*", "destination": "/api/proxy/deliveries/:path*" },
-    { "source": "/celery-progress/:path*", "destination": "/api/proxy/celery-progress/:path*" },
-    { "source": "/sanctum/csrf-cookie", "destination": "/api/proxy/sanctum/csrf-cookie" }
-  ]
+  "rewrites": []
 }
