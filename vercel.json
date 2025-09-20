@@ -3,5 +3,10 @@
   "outputDirectory": "build",
   "framework": "vite",
   "devCommand": "npm run dev",
-  "rewrites": []
+  "rewrites": [
+    {
+      "source": "/api/proxy/:path*/",
+      "destination": "/api/proxy/:path*"
+    }
+  ]
 }
