@@ -144,6 +144,8 @@ export async function primeCsrf(): Promise<void> {
     '/api/csrf/',
     '/dashboard/api/csrf/',
     '/dashboard/api/auth/csrf/',
+    '/auth/csrf/',
+    '/csrf/',
     '/sanctum/csrf-cookie',
     '/api/',
   ]
@@ -187,6 +189,8 @@ async function request<T>(method: HttpMethod, path: string, body?: any, opts: Re
     ...authHeader(opts),
   }
 
+  const routingPref = (((import.meta as any).env?.VITE_API_ROUTING ?? '').toString().toLowerCase())
+  const forceProxyEnv = (((import.meta as any).env?.VITE_FORCE_PROXY_PATH ?? '').toString().toLowerCase() === 'true') || (((import.meta as any).env?.VITE_FORCE_PROXY_PATH ?? '').toString() === '1')
   const init: RequestInit = {
     method,
     // Only include credentials (cookies) when not sending Authorization (API key/basic)
@@ -222,7 +226,13 @@ async function request<T>(method: HttpMethod, path: string, body?: any, opts: Re
   }
 
   // If Authorization header is present, prefer direct routing automatically (Option A)
-  const routingOverride = hasAuthHeader ? 'direct' : undefined
+  const wantsProxyRouting = forceProxyEnv || routingPref === 'proxy'
+  const wantsDirectRouting = routingPref === 'direct'
+  let routingOverride: 'proxy' | 'direct' | undefined
+  if (wantsProxyRouting) routingOverride = 'proxy'
+  else if (hasAuthHeader && !wantsProxyRouting && !forceProxyEnv) routingOverride = 'direct'
+  else if (wantsDirectRouting) routingOverride = 'direct'
+  else routingOverride = undefined
   const url = buildUrl(path, opts.query, routingOverride as any)
 
   async function doFetch(attempt: number): Promise<{ res: Response; data: any }> {

@@ -24,13 +24,21 @@ function candidatePaths(kind: 'profile' | 'deliveries'): string[] {
   const defaults = kind === 'profile'
     ? [
         normalize(`${PREFIX}/profile`),
+        normalize(`${ALT_PREFIX}/profile`),
+        '/dashboard/api/driver/profile/',
         '/api/driver/profile/',
         '/api/driver/profile',
+        '/drivers/api/profile/',
+        '/drivers/api/driver/profile/',
       ]
     : [
         normalize(`${PREFIX}/deliveries`),
+        normalize(`${ALT_PREFIX}/deliveries`),
+        '/dashboard/api/driver/deliveries/',
         '/api/driver/deliveries/',
         '/api/driver/deliveries',
+        '/drivers/api/deliveries/',
+        '/drivers/api/driver/deliveries/',
       ]
   const list = [envPath ? normalize(envPath) : undefined, ...defaults].filter(Boolean) as string[]
   // Deduplicate
