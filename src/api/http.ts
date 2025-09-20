@@ -42,7 +42,7 @@ export function getDefaultAuthConfig(): RequestOptions['auth'] | undefined {
   return defaultAuth
 }
 
-function buildUrl(path: string, query?: Record<string, any>) {
+function buildUrl(path: string, query?: Record<string, any>, routingOverride?: 'proxy' | 'direct') {
   const clean = path.startsWith('/') ? path : `/${path}`
   let url: URL
   const host = (typeof window !== 'undefined' && window.location?.hostname) ? window.location.hostname : ''
@@ -52,7 +52,9 @@ function buildUrl(path: string, query?: Record<string, any>) {
 
   // Decide routing behavior
   let useProxyPath: boolean
-  if (routing === 'proxy') useProxyPath = true
+  if (routingOverride === 'proxy') useProxyPath = true
+  else if (routingOverride === 'direct') useProxyPath = false
+  else if (routing === 'proxy') useProxyPath = true
   else if (routing === 'direct') useProxyPath = false
   else useProxyPath = host.endsWith('.vercel.app') || forceProxyEnv
 
@@ -212,7 +214,9 @@ async function request<T>(method: HttpMethod, path: string, body?: any, opts: Re
     maybeAttachCsrf(method, headers)
   }
 
-  const url = buildUrl(path, opts.query)
+  // If Authorization header is present, prefer direct routing automatically (Option A)
+  const routingOverride = hasAuthHeader ? 'direct' : undefined
+  const url = buildUrl(path, opts.query, routingOverride as any)
 
   async function doFetch(attempt: number): Promise<{ res: Response; data: any }> {
     const res = await fetch(url, init)
