@@ -121,8 +121,6 @@ export async function primeCsrf(): Promise<void> {
   if (hasCsrfCookie()) return
   const candidates = [
     // Known working endpoints on test should set CSRF cookie via middleware
-    '/api/auth/login/',
-    '/api/auth/login',
     '/api/driver/profile/',
     '/api/driver/profile',
     '/api/auth/csrf/',
