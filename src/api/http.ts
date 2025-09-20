@@ -50,6 +50,15 @@ function buildUrl(path: string, query?: Record<string, any>, routingOverride?: '
   const routing = (((import.meta as any).env?.VITE_API_ROUTING ?? '').toString().toLowerCase())
   const forceProxyEnv = (((import.meta as any).env?.VITE_FORCE_PROXY_PATH ?? '').toString().toLowerCase() === 'true') || (((import.meta as any).env?.VITE_FORCE_PROXY_PATH ?? '').toString() === '1')
   const hasExplicitBase = typeof API_BASE_URL === 'string' && API_BASE_URL.trim().length > 0
+  const queryParams = new URLSearchParams()
+  if (query) {
+    for (const [k, v] of Object.entries(query)) {
+      if (v === undefined || v === null) continue
+      queryParams.append(k, String(v))
+    }
+  }
+  const queryString = queryParams.toString()
+  const targetPathWithQuery = queryString ? `${clean}?${queryString}` : clean
 
   // Decide routing behavior
   let useProxyPath: boolean
@@ -66,17 +75,13 @@ function buildUrl(path: string, query?: Record<string, any>, routingOverride?: '
   }
 
   if (useProxyPath) {
-    const pathToUse = (!clean.startsWith('/api/proxy')) ? `/api/proxy${clean}` : clean
-    url = new URL(pathToUse, origin)
+    const proxyUrl = new URL('/api/proxy', origin)
+    const target = clean.startsWith('/api/proxy') ? clean : targetPathWithQuery
+    proxyUrl.searchParams.set('target', target)
+    url = proxyUrl
   } else {
     const base = API_BASE_URL.replace(/\/$/, '')
-    url = new URL(base + clean)
-  }
-  if (query) {
-    for (const [k, v] of Object.entries(query)) {
-      if (v === undefined || v === null) continue
-      url.searchParams.append(k, String(v))
-    }
+    url = new URL(base + targetPathWithQuery)
   }
   return url.toString()
 }

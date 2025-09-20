@@ -12,7 +12,18 @@ const TARGET_BASE = (RAW_TARGET && RAW_TARGET.trim().length ? RAW_TARGET : 'http
 const TARGET = TARGET_BASE
 
 function buildUpstreamUrl(req) {
-  const url = req.url || '/'
+  const fullUrl = req.url || '/'
+  try {
+    const parsed = new URL(fullUrl, 'http://localhost')
+    const explicitTarget = parsed.searchParams.get('target')
+    if (explicitTarget) {
+      let targetPath = explicitTarget
+      if (!targetPath.startsWith('/')) targetPath = '/' + targetPath
+      return TARGET_BASE + targetPath
+    }
+  } catch {}
+
+  const url = fullUrl
   const idx = url.indexOf('/api/proxy')
   const tail = idx >= 0 ? url.slice(idx + '/api/proxy'.length) : url
   let originalPathAndQuery = tail.startsWith('/') ? tail : ('/' + tail)
