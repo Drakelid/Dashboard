@@ -1,6 +1,10 @@
 <template>
-  <section class="space-y-4">
-    <h2 class="text-2xl font-semibold">Support</h2>
+  <section class="space-y-6">
+    <header class="space-y-1">
+      <h2 class="text-2xl font-semibold">Support</h2>
+      <p class="text-sm text-gray-600">Assist customers with new delivery bookings, confirmations, and status lookups.</p>
+    </header>
+    <DeliverySupportTools />
     <CustomerCommunication
       delivery-id="SB-002"
       customer-name="Michael Chen"
@@ -10,5 +14,6 @@
 </template>
 
 <script setup lang="ts">
+import DeliverySupportTools from '@/components/DeliverySupportTools.vue'
 import CustomerCommunication from '@/components/CustomerCommunication.vue'
 </script>

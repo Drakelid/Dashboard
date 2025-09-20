@@ -9,7 +9,7 @@
       "destination": "/api/proxy/:path*"
     },
     {
-      "source": "!{/_next/,/api/,/assets/,/static/,/favicon.ico}/:path*",
+      "source": "/((?!api|_next|assets|static|favicon\\.ico).*)",
       "destination": "/index.html"
     }
   ]
