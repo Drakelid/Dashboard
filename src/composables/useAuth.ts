@@ -42,7 +42,8 @@ const loginBasicFirst = ((import.meta as any).env?.VITE_LOGIN_BASIC_FIRST ?? '')
 const authMode = ((import.meta as any).env?.VITE_AUTH_MODE ?? '').toString().toLowerCase()
 const isVercelHost = typeof window !== 'undefined' && window.location?.hostname.endsWith('.vercel.app')
 const preferApiKey = authMode === 'api-key'
-const forceCookie = authMode === 'cookie' || isVercelHost
+// Only force cookie on Vercel when not explicitly set to basic via env
+const defaultForceCookie = authMode === 'cookie' || (isVercelHost && authMode !== 'basic')
 
 async function bootstrapFromApi(): Promise<User | null> {
   try {
@@ -58,10 +59,11 @@ async function bootstrapFromApi(): Promise<User | null> {
 
 async function login(payload: LoginRequest, opts?: { mode?: 'cookie' | 'basic' | 'auto' }) {
   const mode = opts?.mode || 'auto'
+  const forceCookie = (mode !== 'basic') && defaultForceCookie
   loading.value = true
   error.value = null
   try {
-    // Always force cookie mode on Vercel or when explicitly configured
+    // Force cookie mode only when not explicitly using Basic
     if (forceCookie) {
       try {
         await primeCsrf().catch(() => {})
