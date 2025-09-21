@@ -147,8 +147,8 @@ function shouldShowPickup(pkg: Package) {
 
 function shouldShowDeliver(pkg: Package) {
   const status = (pkg.delivery_status || '').toLowerCase()
-  if (!status) return true
-  return !deliveredStatuses.includes(status)
+  if (!status) return false
+  return pickedUpStatuses.includes(status) && !deliveredStatuses.includes(status)
 }
 
 function formatStatus(s?: string): string {

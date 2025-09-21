@@ -228,6 +228,8 @@ const assigningId = ref<number | null>(null)
 const acceptingGroupId = ref<number | null>(null)
 // Track recently accepted package IDs for visual feedback
 const acceptedIds = reactive(new Set<number>())
+// Track packages we've already surfaced in the new pickup modal to avoid repeat prompts
+const seenPickupPackageIds = reactive(new Set<number>())
 const nearbyInfo = computed(() => {
   if (coords.value.lat != null && coords.value.lng != null) return `Using location: ${coords.value.lat.toFixed(4)}, ${coords.value.lng.toFixed(4)}`
   return 'Showing suggestions without precise location'
@@ -296,25 +298,16 @@ async function loadNearby() {
   try {
     const groups = await getAvailablePackages()
     const list: NearbyGroup[] = []
+    const groupsWithNewPackages: NearbyGroup[] = []
+    const nextSeen = new Set<number>()
     for (const g of groups as UnassignedPackagesByDelivery[]) {
       const rawLat: any = (g as any).pickup_latitude
       const rawLng: any = (g as any).pickup_longitude
       const lat = typeof rawLat === 'string' ? parseFloat(rawLat) : (typeof rawLat === 'number' ? rawLat : undefined)
       const lng = typeof rawLng === 'string' ? parseFloat(rawLng) : (typeof rawLng === 'number' ? rawLng : undefined)
-      list.push({
-        delivery_id: g.delivery_id,
-        uuid: g.uuid,
-        pickup_location: g.pickup_location,
-        delivery_location: g.delivery_location,
-        receiver_name: (g as any).receiver_name,
-        receiver_phone: (g as any).receiver_phone,
-        service: (g as any).service,
-        price: (g as any).price,
-        pickup_lat: Number.isFinite(lat as number) ? (lat as number) : undefined,
-        pickup_lng: Number.isFinite(lng as number) ? (lng as number) : undefined,
-        packages: (g.packages || [])
-          .filter(p => String((p as any).delivery_status || '').toLowerCase() === 'ready_for_pickup')
-          .map(p => ({
+      const readyPackages = (g.packages || [])
+        .filter(p => String((p as any).delivery_status || '').toLowerCase() === 'ready_for_pickup')
+        .map(p => ({
           id: p.id,
           description: p.description,
           weight: (p as any).weight,
@@ -329,10 +322,46 @@ async function loadNearby() {
           temperature_unit: (p as any).temperature_unit,
           volume: (p as any).volume ?? (p as any).volume_liters,
           delivery_status: (p as any).delivery_status,
-        })),
-      })
+        }))
+
+      const groupEntry: NearbyGroup = {
+        delivery_id: g.delivery_id,
+        uuid: g.uuid,
+        pickup_location: g.pickup_location,
+        delivery_location: g.delivery_location,
+        receiver_name: (g as any).receiver_name,
+        receiver_phone: (g as any).receiver_phone,
+        service: (g as any).service,
+        price: (g as any).price,
+        pickup_lat: Number.isFinite(lat as number) ? (lat as number) : undefined,
+        pickup_lng: Number.isFinite(lng as number) ? (lng as number) : undefined,
+        packages: readyPackages,
+      }
+
+      let groupHasNewPackage = false
+      for (const pkg of readyPackages) {
+        if (pkg?.id != null) {
+          nextSeen.add(pkg.id)
+          if (!seenPickupPackageIds.has(pkg.id) && !acceptedIds.has(pkg.id)) {
+            groupHasNewPackage = true
+          }
+        }
+      }
+
+      if (groupHasNewPackage) groupsWithNewPackages.push(groupEntry)
+
+      list.push(groupEntry)
     }
     nearby.value = list
+    seenPickupPackageIds.clear()
+    nextSeen.forEach(id => seenPickupPackageIds.add(id))
+    if (
+      canShowNewPickup.value &&
+      !showNewPickup.value &&
+      groupsWithNewPackages.length > 0
+    ) {
+      triggerPickupModal(groupsWithNewPackages[0])
+    }
     // Update badge counts: sum of packages across groups
     const totalPackages = list.reduce((acc, g) => acc + (g.packages?.length || 0), 0)
     setNearbyCount(totalPackages)
@@ -719,6 +748,53 @@ function enrichRequestFromGroup(req: NewPickupRequest, group: any): NewPickupReq
     enriched.etaMinutes = Math.max(1, Math.round((dist / avgKmh) * 60))
   }
   return enriched
+}
+
+function ensureRequestDefaults(req: NewPickupRequest): NewPickupRequest {
+  const safe = { ...req }
+  safe.priority = safe.priority || 'standard'
+  safe.pickup = {
+    name: safe.pickup?.name || 'Pickup',
+    address: safe.pickup?.address || 'Unknown pickup location',
+  }
+  safe.dropoff = {
+    name: safe.dropoff?.name || 'Receiver',
+    address: safe.dropoff?.address || 'Unknown delivery location',
+  }
+  safe.distanceKm = Number.isFinite(safe.distanceKm) && safe.distanceKm > 0 ? Math.round(safe.distanceKm * 10) / 10 : 1
+  safe.etaMinutes = Number.isFinite(safe.etaMinutes) && safe.etaMinutes > 0 ? Math.round(safe.etaMinutes) : 10
+  safe.dimensions = safe.dimensions || 'Not specified'
+  safe.weightKg = Number.isFinite(safe.weightKg) && safe.weightKg >= 0 ? Math.round(safe.weightKg * 10) / 10 : 0
+  safe.volumeL = Number.isFinite(safe.volumeL) && safe.volumeL >= 0 ? Math.round(safe.volumeL) : 0
+  safe.feeKr = Number.isFinite(safe.feeKr) && safe.feeKr >= 0 ? Math.round(safe.feeKr) : 0
+  safe.expiresInSeconds = Number.isFinite(safe.expiresInSeconds) && safe.expiresInSeconds > 0 ? Math.round(safe.expiresInSeconds) : 180
+  return safe
+}
+
+function triggerPickupModal(group: NearbyGroup) {
+  if (!group) return
+  let base: NewPickupRequest = {
+    priority: 'standard',
+    pickup: {
+      name: group.receiver_name || 'Pickup',
+      address: group.pickup_location || 'Unknown pickup location',
+    },
+    dropoff: {
+      name: group.receiver_name || 'Receiver',
+      address: group.delivery_location || 'Unknown delivery location',
+    },
+    etaMinutes: 10,
+    distanceKm: 1,
+    dimensions: '',
+    weightKg: 0,
+    volumeL: 0,
+    feeKr: 0,
+    expiresInSeconds: 180,
+    deliveryId: group.delivery_id,
+  }
+  base = enrichRequestFromGroup(base, group)
+  const sanitized = ensureRequestDefaults(base)
+  emitNewPickupRequest(sanitized)
 }
 
 // When the modal is shown but deliveryId is missing, attach it as soon as we can
