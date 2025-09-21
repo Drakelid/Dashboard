@@ -5,11 +5,9 @@ const routes: RouteRecordRaw[] = [
   { path: '/login', name: 'login', component: () => import('../views/LoginView.vue') },
   { path: '/', name: 'dashboard', component: () => import('../views/DashboardView.vue') },
   { path: '/active', name: 'active', component: () => import('../views/ActiveDeliveriesView.vue') },
-  { path: '/route', name: 'route', component: () => import('../views/RoutePlanningView.vue') },
   { path: '/messages', name: 'messages', component: () => import('../views/MessagesView.vue') },
   { path: '/history', name: 'history', component: () => import('../views/HistoryView.vue') },
   { path: '/profile', name: 'profile', component: () => import('../views/ProfileView.vue') },
-  { path: '/earnings', name: 'earnings', component: () => import('../views/EarningsView.vue') },
   { path: '/support', name: 'support', component: () => import('../views/SupportView.vue') },
   {
     path: '/menu',
@@ -28,8 +26,6 @@ const routes: RouteRecordRaw[] = [
       return true
     },
   },
-  // Dev/test view for public delivery endpoints
-  { path: '/api-test', name: 'api-test', component: () => import('../views/DeliveryApiTestView.vue') },
 ]
 
 const router = createRouter({
@@ -44,7 +40,7 @@ router.beforeEach((to, from) => {
   const { isAuthenticated } = useAuth()
   const apiKey = (import.meta as any).env?.VITE_API_KEY
 
-  const allowUnauthed = ['/login', '/api-test']
+  const allowUnauthed = ['/login']
   const isAllow = allowUnauthed.some(p => to.path === p || to.path.startsWith(p + '/'))
 
   // In API key mode, treat user as authenticated for routing purposes

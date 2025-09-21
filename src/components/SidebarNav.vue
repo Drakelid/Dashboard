@@ -30,13 +30,6 @@
           </div>
           <span v-if="totalCount > 0" class="ml-auto inline-flex items-center justify-center h-6 min-w-[1.5rem] px-2 rounded-full text-xs bg-green-100 text-green-700">{{ totalCount }}</span>
         </RouterLink>
-        <RouterLink :to="'/route'" class="group tap-target flex items-center gap-3 rounded-xl px-3 py-2 border bg-white" :class="isActive('/route')">
-          <span class="h-8 w-8 rounded-lg inline-flex items-center justify-center shrink-0 leading-none" :class="iconClass('/route')"><Map class="w-4 h-4 align-middle" /></span>
-          <div class="flex-1">
-            <div class="font-medium">Route Planning</div>
-            <div class="text-xs text-gray-500">Optimize your routes</div>
-          </div>
-        </RouterLink>
         <RouterLink :to="'/messages'" class="group tap-target flex items-center gap-3 rounded-xl px-3 py-2 border bg-white" :class="isActive('/messages')">
           <span class="h-8 w-8 rounded-lg inline-flex items-center justify-center shrink-0 leading-none" :class="iconClass('/messages')"><MessageSquare class="w-4 h-4 align-middle" /></span>
           <div class="flex-1">
@@ -57,13 +50,6 @@
           <div class="flex-1">
             <div class="font-medium">History</div>
             <div class="text-xs text-gray-500">Past deliveries</div>
-          </div>
-        </RouterLink>
-        <RouterLink :to="'/earnings'" class="group tap-target flex items-center gap-3 rounded-xl px-3 py-2 border bg-white" :class="isActive('/earnings')">
-          <span class="h-8 w-8 rounded-lg inline-flex items-center justify-center shrink-0 leading-none" :class="iconClass('/earnings')"><DollarSign class="w-4 h-4 align-middle" /></span>
-          <div class="flex-1">
-            <div class="font-medium">Earnings</div>
-            <div class="text-xs text-gray-500">Income & performance</div>
           </div>
         </RouterLink>
         <RouterLink :to="'/profile'" class="group tap-target flex items-center gap-3 rounded-xl px-3 py-2 border bg-white" :class="isActive('/profile')">
@@ -101,7 +87,7 @@
 import { useRoute, RouterLink } from 'vue-router'
 import { computed } from 'vue'
 import { counters } from '@/stores/counters'
-import { Home, Truck, Map, MessageSquare, History, DollarSign, User, HelpCircle, Leaf } from 'lucide-vue-next'
+import { Home, Truck, MessageSquare, History, User, HelpCircle, Leaf } from 'lucide-vue-next'
 const route = useRoute()
 function isActive(path: string) {
   const active = path === '/' ? route.path === '/' : (route.path === path || route.path.startsWith(path + '/'))
@@ -117,5 +103,3 @@ function iconClass(path: string) {
 
 const totalCount = computed(() => (counters.jobs || 0) + (counters.nearby || 0))
 </script>
-
-

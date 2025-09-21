@@ -84,14 +84,11 @@ const currentTitle = computed(() => {
   const p = route.path
   if (p === '/') return 'Dashboard'
   if (p.startsWith('/active')) return 'Jobs & Nearby'
-  if (p.startsWith('/route')) return 'Route Planning'
   if (p.startsWith('/messages')) return 'Messages'
   if (p.startsWith('/history')) return 'History'
-  if (p.startsWith('/earnings')) return 'Earnings'
   if (p.startsWith('/profile')) return 'Profile'
   if (p.startsWith('/support')) return 'Support'
   if (p.startsWith('/menu')) return 'Menu'
-  if (p.startsWith('/api-test')) return 'API Test'
   if (p.startsWith('/login')) return 'Login'
   return 'Dashboard'
 })

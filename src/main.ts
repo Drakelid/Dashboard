@@ -45,7 +45,7 @@ async function preflightAuth() {
       // Ensure no stale session remains
       clear()
       // If not already on an allowlisted route, redirect to login
-      const allow = ['/login', '/api-test']
+      const allow = ['/login']
       const cur = router.currentRoute.value.fullPath
       const isAllow = allow.some(p => cur === p || cur.startsWith(p + '/'))
       if (!isAllow) {
