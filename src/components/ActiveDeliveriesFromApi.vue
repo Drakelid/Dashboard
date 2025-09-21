@@ -44,8 +44,22 @@
               <span v-if="pkg.weight" class="text-gray-500">• {{ pkg.weight }} {{ pkg.weight_unit }}</span>
             </div>
             <div v-if="enableActions" class="flex gap-2 flex-wrap">
-              <button class="h-8 px-3 tap-target rounded border bg-white hover:bg-gray-50 disabled:opacity-50" :disabled="actionLoading" @click="markPickedUp(pkg.id)">Pick up</button>
-              <button class="h-8 px-3 tap-target rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50" :disabled="actionLoading" @click="openDeliver(pkg.id)">Deliver</button>
+              <button
+                v-if="shouldShowPickup(pkg)"
+                class="h-8 px-3 tap-target rounded border bg-white hover:bg-gray-50 disabled:opacity-50"
+                :disabled="actionLoading"
+                @click="markPickedUp(pkg.id)"
+              >
+                Pick up
+              </button>
+              <button
+                v-if="shouldShowDeliver(pkg)"
+                class="h-8 px-3 tap-target rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
+                :disabled="actionLoading"
+                @click="openDeliver(pkg.id)"
+              >
+                Deliver
+              </button>
             </div>
           </div>
         </div>
@@ -58,7 +72,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import type { DriverDeliveryItem } from '@/types/api'
+import type { DriverDeliveryItem, Package } from '@/types/api'
 import { pickup as apiPickup, deliver as apiDeliver } from '@/api/packages'
 import PackageDeliveryModal from '@/components/PackageDeliveryModal.vue'
 import { toast } from '@/utils/toast'
@@ -77,6 +91,8 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{ (e: 'refresh'): void }>()
 
 const displayItems = computed(() => props.showFullView ? props.items : props.items.slice(0, 3))
+const pickedUpStatuses = ['picked_up', 'in_transit', 'delivered']
+const deliveredStatuses = ['delivered']
 
 const actionLoading = ref(false)
 const deliverOpen = ref(false)
@@ -121,6 +137,18 @@ async function confirmDeliver(payload: { delivered_to: string; delivery_notes?: 
   } finally {
     actionLoading.value = false
   }
+}
+
+function shouldShowPickup(pkg: Package) {
+  const status = (pkg.delivery_status || '').toLowerCase()
+  if (!status) return true
+  return !pickedUpStatuses.includes(status)
+}
+
+function shouldShowDeliver(pkg: Package) {
+  const status = (pkg.delivery_status || '').toLowerCase()
+  if (!status) return true
+  return !deliveredStatuses.includes(status)
 }
 
 function formatStatus(s?: string): string {
