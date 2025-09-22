@@ -2,9 +2,7 @@
   <aside class="space-y-6">
     <!-- Brand -->
     <div class="flex items-center gap-3 px-2">
-      <div class="h-10 w-10 rounded-full bg-green-100 inline-flex items-center justify-center shrink-0 leading-none">
-        <Leaf class="w-5 h-5 text-green-700 align-middle" />
-      </div>
+      <img :src="logoSrc" alt="SamBring" class="h-10 w-auto" />
       <div>
         <div class="font-semibold">SamBring</div>
         <div class="text-xs text-green-700">Eco-Delivery Dashboard</div>
@@ -87,7 +85,7 @@
 import { useRoute, RouterLink } from 'vue-router'
 import { computed } from 'vue'
 import { counters } from '@/stores/counters'
-import { Home, Truck, MessageSquare, History, User, HelpCircle, Leaf } from 'lucide-vue-next'
+import { Home, Truck, MessageSquare, History, User, HelpCircle } from 'lucide-vue-next'
 const route = useRoute()
 function isActive(path: string) {
   const active = path === '/' ? route.path === '/' : (route.path === path || route.path.startsWith(path + '/'))
@@ -100,6 +98,8 @@ function iconClass(path: string) {
     ? 'bg-green-100 text-green-700 ring-1 ring-green-200'
     : 'bg-gray-100 text-gray-700 group-hover:bg-gray-200 group-hover:text-gray-900'
 }
+
+const logoSrc = new URL('../../logo.png', import.meta.url).href
 
 const totalCount = computed(() => (counters.jobs || 0) + (counters.nearby || 0))
 </script>

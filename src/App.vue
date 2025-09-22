@@ -17,7 +17,7 @@
                 <Menu class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 text-gray-700" />
               </button>
               <div class="flex items-center gap-2 text-sm text-gray-600">
-                <span>SamBring</span>
+                <img :src="logoSrc" alt="SamBring" class="h-7 w-auto" />
                 <span class="opacity-50">›</span>
                 <span class="font-medium text-gray-900">{{ currentTitle }}</span>
               </div>
@@ -64,6 +64,7 @@ const isDev = import.meta.env.DEV
 const route = useRoute()
 const router = useRouter()
 
+const logoSrc = new URL('../logo.png', import.meta.url).href
 // Toggle behavior for mobile hamburger: open /menu with redirect when closed,
 // and go back to redirect (or '/') when already on /menu. Replace when closing
 // to avoid stacking history entries.
