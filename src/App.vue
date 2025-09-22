@@ -17,7 +17,7 @@
                 <Menu class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 text-gray-700" />
               </button>
               <div class="flex items-center gap-2 text-sm text-gray-600">
-                <img :src="logoSrc" alt="SamBring" class="h-16 w-auto" />
+                <img :src="logoSrc" alt="SamBring" class="h-12 w-auto" />
                 <span class="opacity-50">›</span>
                 <span class="font-medium text-gray-900">{{ currentTitle }}</span>
               </div>
