@@ -4,7 +4,6 @@
       <h2 class="text-2xl font-semibold">Support</h2>
       <p class="text-sm text-gray-600">Assist customers with new delivery bookings, confirmations, and status lookups.</p>
     </header>
-    <DeliverySupportTools />
     <CustomerCommunication
       delivery-id="SB-002"
       customer-name="Michael Chen"
@@ -14,6 +13,5 @@
 </template>
 
 <script setup lang="ts">
-import DeliverySupportTools from '@/components/DeliverySupportTools.vue'
 import CustomerCommunication from '@/components/CustomerCommunication.vue'
 </script>

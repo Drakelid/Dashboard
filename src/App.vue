@@ -13,7 +13,7 @@
         <header class="sticky top-0 z-40 glass-effect border-b border-gray-200/60">
           <div class="flex h-16 items-center justify-between px-4 md:px-6 gap-4">
             <div class="flex items-center gap-2">
-              <button type="button" @click="toggleMenuRoute" class="lg:hidden relative h-11 w-11 tap-target rounded-full border border-gray-200 bg-white hover:bg-gray-50 leading-[0] p-0" aria-label="Toggle navigation menu">
+              <button type="button" @click="toggleMenuRoute" class="md:hidden relative h-11 w-11 tap-target rounded-full border border-gray-200 bg-white hover:bg-gray-50 leading-[0] p-0" aria-label="Toggle navigation menu">
                 <Menu class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 text-gray-700" />
               </button>
               <div class="flex items-center gap-2 text-sm text-gray-600">
