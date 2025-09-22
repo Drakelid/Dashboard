@@ -2,7 +2,7 @@
   <aside class="space-y-6">
     <!-- Brand -->
     <div class="flex items-center gap-3 px-2">
-      <img :src="logoSrc" alt="SamBring" class="h-10 w-auto" />
+      <img :src="logoSrc" alt="SamBring" class="h-12 w-auto" />
       <div>
         <div class="font-semibold">SamBring</div>
         <div class="text-xs text-green-700">Eco-Delivery Dashboard</div>
