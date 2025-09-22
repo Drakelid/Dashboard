@@ -1,7 +1,7 @@
 <template>
   <section class="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
     <div
-      v-for="(stat, index) in stats"
+      v-for="(stat, index) in statsToRender"
       :key="stat.title"
       class="relative overflow-hidden rounded-xl border bg-white shadow-sm hover:shadow-lg transition-all cursor-pointer"
     >
@@ -15,7 +15,7 @@
       <div
         class="absolute bottom-0 left-0 h-0.5 transition-all duration-700 pointer-events-none"
         :class="stat.accentColor"
-        :style="{ width: stat.progress + '%' }"
+        :style="{ width: (stat.progress ?? 0) + '%' }"
       />
 
       <div class="relative z-10 p-4 space-y-2">
@@ -24,7 +24,7 @@
             {{ stat.title }}
           </div>
           <div class="p-2 rounded-lg bg-white/80 backdrop-blur-sm shadow-sm">
-            <component :is="icons[index]" class="w-4 h-4 text-gray-700" aria-hidden="true" />
+            <component :is="resolvedIcons[index]" class="w-4 h-4 text-gray-700" aria-hidden="true" />
           </div>
         </div>
 
@@ -56,12 +56,12 @@
 </template>
 
 <script setup lang="ts">
-import { reactive } from 'vue'
+import { computed } from 'vue'
 import { Package, Banknote, Star, Clock, MapPin, TrendingUp, Medal, DollarSign } from 'lucide-vue-next'
 
 type ChangeType = 'positive' | 'negative' | 'neutral'
 
-interface Stat {
+interface BaseStat {
   title: string
   value: string
   description: string
@@ -73,7 +73,9 @@ interface Stat {
   showMini?: boolean
 }
 
-const stats = reactive<Stat[]>([
+type Stat = BaseStat & { icon?: any }
+
+const defaultStats: Stat[] = [
   {
     title: "Today's Deliveries",
     value: '8',
@@ -157,9 +159,9 @@ const stats = reactive<Stat[]>([
     change: '',
     changeType: 'neutral',
   },
-])
+]
 
-const icons = [
+const defaultIcons = [
   Package,
   Banknote,
   Star,
@@ -169,6 +171,16 @@ const icons = [
   Medal,
   DollarSign,
 ]
+
+const props = defineProps<{
+  stats?: Stat[]
+}>()
+
+const statsToRender = computed(() => (props.stats && props.stats.length ? props.stats : defaultStats))
+
+const resolvedIcons = computed(() =>
+  statsToRender.value.map((stat, idx) => stat.icon || defaultIcons[idx % defaultIcons.length])
+)
 
 function getChangeColor(type: ChangeType) {
   switch (type) {

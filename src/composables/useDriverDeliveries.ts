@@ -7,6 +7,7 @@ const past = ref<DriverDeliveryItem[] | null>(null)
 const loading = ref(false)
 const error = ref<string | null>(null)
 
+// Data originates from /api/driver/deliveries/ (see SamBringNew.yaml)
 async function fetchDeliveries(filter: 'future' | 'past') {
   loading.value = true
   error.value = null
@@ -29,6 +30,13 @@ async function fetchDeliveries(filter: 'future' | 'past') {
   }
 }
 
+async function loadAll() {
+  await Promise.allSettled([
+    fetchDeliveries('future'),
+    fetchDeliveries('past'),
+  ])
+}
+
 export function useDriverDeliveries() {
   return {
     future,
@@ -37,11 +45,7 @@ export function useDriverDeliveries() {
     error,
     loadFuture: () => fetchDeliveries('future'),
     loadPast: () => fetchDeliveries('past'),
-    refresh: async () => {
-      await Promise.allSettled([
-        fetchDeliveries('future'),
-        fetchDeliveries('past'),
-      ])
-    },
+    loadAll,
+    refresh: loadAll,
   }
 }
