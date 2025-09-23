@@ -274,6 +274,12 @@
       @close="packageModalOpen = false"
       @scan="handleScan"
     />
+    <CameraScanner
+      :open="scannerOpen"
+      @close="scannerOpen = false"
+      @decoded="handleScanResult"
+      @error="handleScanError"
+    />
   </section>
 </template>
 
@@ -283,6 +289,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useDriverDeliveries } from '@/composables/useDriverDeliveries'
 import SmallMap from '@/components/SmallMap.vue'
 import AssignmentPackageModal from '@/components/AssignmentPackageModal.vue'
+import CameraScanner from '@/components/CameraScanner.vue'
 import { toast } from '@/utils/toast'
 import { geocodeAddress } from '@/utils/geocode'
 import type { DriverDeliveryItem, Package } from '@/types/api'
@@ -315,6 +322,7 @@ const taskDrawerOpen = ref(true)
 const timelineFilter = ref<'all' | 'ready' | 'in_transit' | 'needs_action'>('all')
 const selectedAssignmentId = ref<string | null>(normalizeFocus(route.query.focus))
 const packageModalOpen = ref(false)
+const scannerOpen = ref(false)
 const pickedUpState = reactive<Record<string, boolean>>({})
 const assignmentCoords = reactive<Record<string, { lat: number; lng: number }>>({})
 const pendingGeocodes = new Set<string>()
@@ -511,7 +519,16 @@ function handleSOS() {
 }
 
 function handleScan() {
-  toast.success('Opening scanner...')
+  scannerOpen.value = true
+}
+
+function handleScanResult(value: string) {
+  scannerOpen.value = false
+  toast.success('Scanned: ' + value)
+}
+
+function handleScanError(message: string) {
+  toast.error(message)
 }
 
 function callContact(assignment: AssignmentExtended) {
@@ -925,3 +942,5 @@ type TimelineEvent = {
 
 type TaskPriority = 'urgent' | 'express' | 'standard'
 </script>
+
+
