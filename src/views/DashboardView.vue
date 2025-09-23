@@ -81,38 +81,12 @@
               </h3>
             </div>
             <p class="text-sm text-gray-600">{{ quickStats.activeDeliveries }} active deliveries - {{ quickStats.deliveryFeeLabel }} standard fee - {{ quickStats.ecoFriendly }} eco-friendly packages</p>
-            <div class="space-y-3">
-              <div
-                v-for="(task, index) in upcomingTasks"
-                :key="task.id"
-                class="p-4 rounded-lg border transition-shadow hover:shadow-sm"
-                :class="getPriorityBg(task.priority)"
-              >
-                <div class="flex items-center justify-between mb-2">
-                  <div class="flex items-center gap-2 text-sm">
-                    <span class="px-2 py-0.5 rounded bg-black/5 capitalize">{{ task.priority }}</span>
-                    <span class="font-medium">{{ task.id }}</span>
-                    <span class="text-gray-500">{{ task.type }}</span>
-                    <span v-if="task.ecoFriendly" class="px-2 py-0.5 rounded bg-green-100 text-green-800 text-xs">Eco</span>
-                  </div>
-                  <div class="flex items-center gap-3 text-sm">
-                    <span class="font-medium text-green-600">{{ task.earnings }}</span>
-                    <span class="font-medium">{{ task.time }}</span>
-                  </div>
-                </div>
-                <div class="text-sm">
-                  <div class="font-medium">{{ task.location }}</div>
-                  <div class="text-gray-500">{{ task.address }}</div>
-                  <div class="flex items-center justify-between mt-2">
-                    <div class="text-gray-500">{{ task.distance }}</div>
-                    <button class="h-8 px-3 text-xs tap-target rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-1.5">
-                      <Navigation class="w-3.5 h-3.5" />
-                      <span>Navigate</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <TaskList
+              variant="plain"
+              :tasks="upcomingTasks"
+              empty-text="No upcoming deliveries."
+              @navigate="handleNavigate"
+            />
           </div>
 
           <!-- Sidebar Summary -->
@@ -129,41 +103,12 @@
 
       <!-- Tasks -->
       <div v-if="tab === 'tasks'" class="space-y-6">
-        <div class="rounded-xl border bg-white p-4 shadow-sm">
-          <div class="font-semibold mb-3">Upcoming Tasks</div>
-          <div class="space-y-3">
-            <div
-              v-for="(task, index) in upcomingTasks"
-              :key="task.id"
-              class="p-4 rounded-lg border transition-shadow hover:shadow-sm"
-              :class="getPriorityBg(task.priority)"
-            >
-              <div class="flex items-center justify-between mb-2">
-                <div class="flex items-center gap-2 text-sm">
-                  <span class="px-2 py-0.5 rounded bg-black/5 capitalize">{{ task.priority }}</span>
-                  <span class="font-medium">{{ task.id }}</span>
-                  <span class="text-gray-500">{{ task.type }}</span>
-                  <span v-if="task.ecoFriendly" class="px-2 py-0.5 rounded bg-green-100 text-green-800 text-xs">Eco</span>
-                </div>
-                <div class="flex items-center gap-3 text-sm">
-                  <span class="font-medium text-green-600">{{ task.earnings }}</span>
-                  <span class="font-medium">{{ task.time }}</span>
-                </div>
-              </div>
-              <div class="text-sm">
-                <div class="font-medium">{{ task.location }}</div>
-                <div class="text-gray-500">{{ task.address }}</div>
-                <div class="flex items-center justify-between mt-2">
-                  <div class="text-gray-500">{{ task.distance }}</div>
-                  <button class="h-8 px-3 text-xs tap-target rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-1.5">
-                    <Navigation class="w-3.5 h-3.5" />
-                    <span>Navigate</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <TaskList
+          :tasks="upcomingTasks"
+          title="Upcoming Tasks"
+          empty-text="No upcoming deliveries."
+          @navigate="handleNavigate"
+        />
       </div>
 
       <!-- Achievements -->
@@ -196,28 +141,17 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import OverviewCards from '@/components/OverviewCards.vue'
 import AnalyticsCharts from '@/components/AnalyticsCharts.vue'
 import DeliveryHistory from '@/components/DeliveryHistory.vue'
 import Spinner from '@/components/Spinner.vue'
-import { Info, Map, Navigation, Play, Package, Banknote, Star, Clock } from 'lucide-vue-next'
+import { Info, Map, Play, Package, Banknote, Star, Clock } from 'lucide-vue-next'
 import { useDriverProfile } from '@/composables/useDriverProfile'
 import { useDriverDeliveries } from '@/composables/useDriverDeliveries'
 import type { DriverDeliveryItem } from '@/types/api'
-
-type Priority = 'urgent' | 'express' | 'standard'
-
-interface Task {
-  id: string
-  type: 'pickup' | 'delivery'
-  location: string
-  address: string
-  time: string
-  priority: Priority
-  distance: string
-  ecoFriendly: boolean
-  earnings: string
-}
+import TaskList from '@/components/TaskList.vue'
+import type { DeliveryTask } from '@/types/tasks'
 
 interface Achievement {
   title: string
@@ -230,6 +164,7 @@ const tab = ref<'overview' | 'analytics' | 'tasks' | 'achievements'>('overview')
 
 const { profile, loading: profileLoading, error: profileError, load: loadProfile } = useDriverProfile()
 const { future, past, loading: deliveriesLoading, error: deliveriesError, loadAll } = useDriverDeliveries()
+const router = useRouter()
 
 const isLoading = computed(() => profileLoading.value || deliveriesLoading.value)
 const errorMessage = computed(() => profileError.value || deliveriesError.value || null)
@@ -355,7 +290,7 @@ function formatTime(item: DriverDeliveryItem) {
   return time.slice(0, 5)
 }
 
-function createTask(entry: DriverDeliveryItem): Task {
+function createTask(entry: DriverDeliveryItem): DeliveryTask {
   const packages = entry.packages || []
   const ecoFriendly = packages.every(pkg => !pkg.hazardous)
   return {
@@ -371,10 +306,14 @@ function createTask(entry: DriverDeliveryItem): Task {
   }
 }
 
-const upcomingTasks = computed<Task[]>(() => {
+const upcomingTasks = computed<DeliveryTask[]>(() => {
   if (!futureDeliveries.value.length) return []
   return futureDeliveries.value.slice(0, 3).map(createTask)
 })
+
+function handleNavigate(task: DeliveryTask) {
+  router.push({ name: 'active', query: { focus: task.id } })
+}
 
 const achievements = computed<Achievement[]>(() => {
   const stats = quickStats.value
@@ -460,14 +399,4 @@ const overviewCardStats = computed(() => {
   ]
 })
 
-function getPriorityBg(priority: Priority) {
-  switch (priority) {
-    case 'urgent':
-      return 'border-red-200 bg-red-50'
-    case 'express':
-      return 'border-orange-200 bg-orange-50'
-    default:
-      return 'border-blue-200 bg-blue-50'
-  }
-}
 </script>

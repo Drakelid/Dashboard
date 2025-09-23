@@ -25,8 +25,17 @@
             <div class="flex items-center gap-3 flex-1 md:flex-none md:w-[520px]">
               <div class="flex-1">
                 <div class="relative">
-                  <input class="w-full h-9 pl-3 pr-10 rounded-lg border bg-white placeholder:text-gray-400 text-sm"
-                         placeholder="Search deliveries, customers… (⌘K)" />
+                  <input
+                    ref="searchActivator"
+                    type="search"
+                    aria-label="Open command palette"
+                    class="w-full h-9 pl-3 pr-10 rounded-lg border bg-white placeholder:text-gray-400 text-sm cursor-pointer"
+                    placeholder="Search deliveries, customers… (⌘K)"
+                    readonly
+                    @focus="openPalette()"
+                    @click.prevent="openPalette()"
+                    @keydown="handleSearchKeydown"
+                  />
                   <span class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400">⌘K</span>
                 </div>
               </div>
@@ -49,20 +58,36 @@
     </div>
   </div>
   <!-- Mobile navigation drawer removed; use /menu route instead -->
+  <CommandPalette
+    v-model="isPaletteOpen"
+    :commands="commandItems"
+    :initial-query="paletteInitialQuery"
+    @run="onCommandRun"
+  />
   <ToastHost />
 </template>
 
 <script setup lang="ts">
 import { RouterView, useRoute, useRouter } from 'vue-router'
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import SidebarNav from '@/components/SidebarNav.vue'
 import { Bell, Menu } from 'lucide-vue-next'
 import ToastHost from '@/components/ToastHost.vue'
 import DevAuthModeBanner from '@/components/DevAuthModeBanner.vue'
+import CommandPalette from '@/components/CommandPalette.vue'
+import { navSections } from '@/constants/navigation'
+import type { CommandItem } from '@/types/command'
+import { useDriverDeliveries } from '@/composables/useDriverDeliveries'
+import type { DriverDeliveryItem } from '@/types/api'
 
 const isDev = import.meta.env.DEV
 const route = useRoute()
 const router = useRouter()
+const searchActivator = ref<HTMLInputElement | null>(null)
+const isPaletteOpen = ref(false)
+const paletteInitialQuery = ref('')
+
+const { future, refresh, loadFuture } = useDriverDeliveries()
 
 const logoSrc = new URL('../logo.png', import.meta.url).href
 // Toggle behavior for mobile hamburger: open /menu with redirect when closed,
@@ -76,6 +101,107 @@ function toggleMenuRoute() {
   } else {
     router.push({ name: 'menu', query: { redirect: route.fullPath } })
   }
+}
+
+function openPalette(initial = '') {
+  paletteInitialQuery.value = initial
+  isPaletteOpen.value = true
+}
+
+function handleSearchKeydown(event: KeyboardEvent) {
+  if (event.key === 'Tab') return
+  event.preventDefault()
+  const initial = event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey ? event.key : ''
+  openPalette(initial)
+}
+
+function handleGlobalShortcut(event: KeyboardEvent) {
+  const isModifier = event.metaKey || event.ctrlKey
+  if (isModifier && event.key.toLowerCase() === 'k') {
+    event.preventDefault()
+    openPalette('')
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleGlobalShortcut)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleGlobalShortcut)
+})
+
+watch(isPaletteOpen, value => {
+  if (value) {
+    if (!future.value) {
+      loadFuture().catch(() => {})
+    }
+  } else {
+    paletteInitialQuery.value = ''
+  }
+})
+
+const routeCommands = computed<CommandItem[]>(() =>
+  navSections.flatMap(section =>
+    section.items.map(item => ({
+      id: `route:${item.path}`,
+      title: item.label,
+      subtitle: item.description,
+      group: 'Navigate',
+      keywords: [item.path, item.label, item.description || ''].filter(Boolean),
+      run: () => router.push(item.path),
+    }))
+  )
+)
+
+function deliverySubtitle(item: DriverDeliveryItem) {
+  const pickup = item.pickup_location || item.delivery?.pickup_location || 'Pickup pending'
+  const dropoff = item.delivery?.delivery_location || item.location || 'Destination pending'
+  return `${pickup} → ${dropoff}`
+}
+
+const deliveryCommands = computed<CommandItem[]>(() => {
+  const deliveries = future.value || []
+  return deliveries.slice(0, 20).map(item => {
+    const identifier = String(item.delivery?.id ?? (item.delivery as any)?.uuid ?? item.location ?? 'delivery')
+    return {
+      id: `delivery:${identifier}`,
+      title: `View delivery #${identifier}`,
+      subtitle: deliverySubtitle(item),
+      group: 'Deliveries',
+      keywords: [identifier, item.location || '', item.delivery?.delivery_location || ''],
+      run: () => router.push({ name: 'active', query: { focus: identifier } }),
+    }
+  })
+})
+
+const actionCommands = computed<CommandItem[]>(() => [
+  {
+    id: 'action:refresh-deliveries',
+    title: 'Refresh deliveries data',
+    subtitle: 'Fetch latest upcoming and past deliveries',
+    group: 'Actions',
+    keywords: ['reload', 'update', 'jobs'],
+    run: () => refresh(),
+  },
+  {
+    id: 'action:view-support',
+    title: 'Open Support',
+    subtitle: 'Go to the support tools view',
+    group: 'Actions',
+    keywords: ['help', 'contact'],
+    run: () => router.push({ name: 'support' }),
+  },
+])
+
+const commandItems = computed<CommandItem[]>(() => [
+  ...routeCommands.value,
+  ...actionCommands.value,
+  ...deliveryCommands.value,
+])
+
+function onCommandRun() {
+  paletteInitialQuery.value = ''
 }
 
 // Bottom nav removed on mobile by design; use header menu to open the sidebar (/menu)
