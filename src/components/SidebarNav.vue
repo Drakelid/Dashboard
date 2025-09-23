@@ -9,60 +9,29 @@
       </div>
     </div>
 
-    <!-- Main Navigation -->
-    <div>
-      <div class="px-2 text-xs uppercase tracking-wide text-gray-500 mb-2">Main Navigation</div>
+    <div v-for="section in navSections" :key="section.id">
+      <div class="px-2 text-xs uppercase tracking-wide text-gray-500 mb-2">{{ section.title }}</div>
       <nav class="space-y-1">
-        <RouterLink :to="'/'" class="group tap-target flex items-center gap-3 rounded-xl px-3 py-2 border bg-white" :class="isActive('/')">
-          <span class="h-8 w-8 rounded-lg inline-flex items-center justify-center shrink-0 leading-none" :class="iconClass('/')"><Home class="w-4 h-4 align-middle" /></span>
+        <RouterLink
+          v-for="item in section.items"
+          :key="item.path"
+          :to="item.path"
+          class="group tap-target flex items-center gap-3 rounded-xl px-3 py-2 border bg-white"
+          :class="isActive(item.path)"
+        >
+          <span class="h-8 w-8 rounded-lg inline-flex items-center justify-center shrink-0 leading-none" :class="iconClass(item.path)">
+            <component :is="item.icon" class="w-4 h-4 align-middle" />
+          </span>
           <div class="flex-1">
-            <div class="font-medium">Dashboard</div>
-            <div class="text-xs text-gray-500">Overview & performance</div>
+            <div class="font-medium">{{ item.label }}</div>
+            <div v-if="item.description" class="text-xs text-gray-500">{{ item.description }}</div>
           </div>
-        </RouterLink>
-        <RouterLink :to="'/active'" class="group tap-target flex items-center gap-3 rounded-xl px-3 py-2 border bg-white" :class="isActive('/active')">
-          <span class="h-8 w-8 rounded-lg inline-flex items-center justify-center shrink-0 leading-none" :class="iconClass('/active')"><Truck class="w-4 h-4 align-middle" /></span>
-          <div class="flex-1">
-            <div class="font-medium">Jobs & Nearby</div>
-            <div class="text-xs text-gray-500">Your jobs and nearby pickups</div>
-          </div>
-          <span v-if="totalCount > 0" class="ml-auto inline-flex items-center justify-center h-6 min-w-[1.5rem] px-2 rounded-full text-xs bg-green-100 text-green-700">{{ totalCount }}</span>
-        </RouterLink>
-        <RouterLink :to="'/messages'" class="group tap-target flex items-center gap-3 rounded-xl px-3 py-2 border bg-white" :class="isActive('/messages')">
-          <span class="h-8 w-8 rounded-lg inline-flex items-center justify-center shrink-0 leading-none" :class="iconClass('/messages')"><MessageSquare class="w-4 h-4 align-middle" /></span>
-          <div class="flex-1">
-            <div class="font-medium">Messages</div>
-            <div class="text-xs text-gray-500">Customer communications</div>
-          </div>
-          <span class="ml-auto inline-flex items-center justify-center h-6 min-w-[1.5rem] px-2 rounded-full text-xs bg-green-100 text-green-700">3</span>
-        </RouterLink>
-      </nav>
-    </div>
-
-    <!-- Data & Settings -->
-    <div>
-      <div class="px-2 text-xs uppercase tracking-wide text-gray-500 mb-2">Data & Settings</div>
-      <nav class="space-y-1">
-        <RouterLink :to="'/history'" class="group tap-target flex items-center gap-3 rounded-xl px-3 py-2 border bg-white" :class="isActive('/history')">
-          <span class="h-8 w-8 rounded-lg inline-flex items-center justify-center shrink-0 leading-none" :class="iconClass('/history')"><History class="w-4 h-4 align-middle" /></span>
-          <div class="flex-1">
-            <div class="font-medium">History</div>
-            <div class="text-xs text-gray-500">Past deliveries</div>
-          </div>
-        </RouterLink>
-        <RouterLink :to="'/profile'" class="group tap-target flex items-center gap-3 rounded-xl px-3 py-2 border bg-white" :class="isActive('/profile')">
-          <span class="h-8 w-8 rounded-lg inline-flex items-center justify-center shrink-0 leading-none" :class="iconClass('/profile')"><User class="w-4 h-4 align-middle" /></span>
-          <div class="flex-1">
-            <div class="font-medium">Profile</div>
-            <div class="text-xs text-gray-500">Your driver profile</div>
-          </div>
-        </RouterLink>
-        <RouterLink :to="'/support'" class="group tap-target flex items-center gap-3 rounded-xl px-3 py-2 border bg-white" :class="isActive('/support')">
-          <span class="h-8 w-8 rounded-lg inline-flex items-center justify-center shrink-0 leading-none" :class="iconClass('/support')"><HelpCircle class="w-4 h-4 align-middle" /></span>
-          <div class="flex-1">
-            <div class="font-medium">Support</div>
-            <div class="text-xs text-gray-500">Help & assistance</div>
-          </div>
+          <span
+            v-if="badgeValue(item) !== null"
+            class="ml-auto inline-flex items-center justify-center h-6 min-w-[1.5rem] px-2 rounded-full text-xs bg-green-100 text-green-700"
+          >
+            {{ badgeValue(item) }}
+          </span>
         </RouterLink>
       </nav>
     </div>
@@ -85,8 +54,12 @@
 import { useRoute, RouterLink } from 'vue-router'
 import { computed } from 'vue'
 import { counters } from '@/stores/counters'
-import { Home, Truck, MessageSquare, History, User, HelpCircle } from 'lucide-vue-next'
+import { navSections as navigationSections, type NavItem } from '@/constants/navigation'
+
 const route = useRoute()
+
+const navSections = navigationSections
+
 function isActive(path: string) {
   const active = path === '/' ? route.path === '/' : (route.path === path || route.path.startsWith(path + '/'))
   return active ? 'bg-green-600/10 ring-2 ring-green-300 text-green-800' : 'hover:bg-gray-50'
@@ -102,4 +75,13 @@ function iconClass(path: string) {
 const logoSrc = new URL('../../logo.png', import.meta.url).href
 
 const totalCount = computed(() => (counters.jobs || 0) + (counters.nearby || 0))
+
+function badgeValue(item: NavItem) {
+  if (!item.badge || item.badge.type === 'none') return null
+  if (item.badge.type === 'static') return item.badge.value
+  if (item.badge.type === 'jobsTotal') {
+    return totalCount.value > 0 ? totalCount.value : null
+  }
+  return null
+}
 </script>

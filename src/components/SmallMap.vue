@@ -27,14 +27,16 @@ const el = ref<HTMLDivElement | null>(null)
 let map: any = null
 let layerGroup: any = null
 let Lref: any = null
-let markerIndex: Array<{ id?: string | number; marker: any }> = []
 let defaultIcon: any = null
+let markersMap = new Map<string, { marker: any; type: 'circle' | 'default'; id?: string | number }>()
+let lastPropCenter: { lat: number; lng: number } | null = null
+let lastPropZoom: number | null = null
+let programmaticMove = false
 
 async function ensureLeaflet() {
   if (Lref) return Lref
   const mod: any = await import('leaflet')
   Lref = mod.default || mod
-  // Fix marker icons using Vite-served URLs; avoid Leaflet imagePath
   try { (Lref.Icon.Default as any).imagePath = undefined } catch {}
   try { delete (Lref.Icon.Default.prototype as any)._getIconUrl } catch {}
   defaultIcon = Lref.icon({
@@ -53,53 +55,117 @@ async function ensureLeaflet() {
 async function initMap() {
   const L = await ensureLeaflet()
   if (!el.value) return
-  const fallback = props.center || { lat: 59.9139, lng: 10.7522 } // Oslo fallback
+  const fallback = props.center || { lat: 59.9139, lng: 10.7522 }
   map = L.map(el.value).setView([fallback.lat, fallback.lng], props.zoom)
+  lastPropCenter = props.center ? { ...props.center } : null
+  lastPropZoom = props.zoom
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '© OpenStreetMap contributors',
   }).addTo(map)
   layerGroup = L.layerGroup().addTo(map)
-  updateLayers()
+  map.on('moveend', () => {
+    programmaticMove = false
+  })
+  syncMarkers()
+  if (props.center) syncCenter(true)
 }
 
-function updateLayers() {
-  if (!map || !Lref) return
-  const L = Lref
-  layerGroup.clearLayers()
-  markerIndex = []
-  const center = props.center || { lat: 59.9139, lng: 10.7522 }
-  map.setView([center.lat, center.lng], props.zoom)
-  for (const m of props.markers || []) {
+function markerKey(marker: { id?: string | number; lat: number; lng: number }, index: number) {
+  if (marker.id != null) return String(marker.id)
+  return `${index}:${marker.lat}:${marker.lng}`
+}
+
+function syncCenter(force = false) {
+  if (!map) return
+  const target = props.center
+  if (!target) return
+  const changed =
+    !lastPropCenter ||
+    Math.abs(lastPropCenter.lat - target.lat) > 1e-6 ||
+    Math.abs(lastPropCenter.lng - target.lng) > 1e-6
+  if (!changed && !force) return
+  programmaticMove = true
+  map.setView([target.lat, target.lng], typeof props.zoom === 'number' ? props.zoom : map.getZoom())
+  lastPropCenter = { ...target }
+  lastPropZoom = props.zoom
+}
+
+function syncZoom() {
+  if (!map) return
+  if (typeof props.zoom !== 'number') return
+  if (lastPropZoom === props.zoom) return
+  programmaticMove = true
+  map.setZoom(props.zoom)
+  lastPropZoom = props.zoom
+}
+
+function syncMarkers() {
+  if (!map || !Lref || !layerGroup) return
+  const next = new Map<string, { marker: any; type: 'circle' | 'default'; id?: string | number }>()
+  const markers = props.markers || []
+  markers.forEach((m, index) => {
+    const key = markerKey(m, index)
+    const existing = markersMap.get(key)
+    const color = m.color || (m.kind === 'job' ? '#16a34a' : m.kind === 'nearby' ? '#2563eb' : '#2563eb')
+    if (existing) {
+      existing.marker.setLatLng([m.lat, m.lng])
+      if (existing.type === 'circle') {
+        existing.marker.setStyle({ color, fillColor: color })
+      }
+      if (m.label) {
+        existing.marker.bindPopup(m.label)
+      } else if (existing.marker.getPopup()) {
+        existing.marker.unbindPopup()
+      }
+      existing.id = m.id
+      next.set(key, existing)
+      markersMap.delete(key)
+      return
+    }
+
     let marker: any
     if (m.kind && m.kind !== 'user') {
-      const color = m.color || (m.kind === 'job' ? '#16a34a' : '#2563eb')
-      marker = L.circleMarker([m.lat, m.lng], {
+      marker = Lref.circleMarker([m.lat, m.lng], {
         radius: 7,
         color,
         weight: 2,
         fillColor: color,
         fillOpacity: 0.9,
       })
+      marker.addTo(layerGroup)
     } else {
-      marker = L.marker([m.lat, m.lng], defaultIcon ? { icon: defaultIcon } : undefined)
+      marker = Lref.marker([m.lat, m.lng], defaultIcon ? { icon: defaultIcon } : undefined)
+      marker.addTo(layerGroup)
     }
     if (m.label) marker.bindPopup(m.label)
-    marker.addTo(layerGroup)
-    markerIndex.push({ id: m.id, marker })
-  }
+    next.set(key, { marker, type: m.kind && m.kind !== 'user' ? 'circle' : 'default', id: m.id })
+  })
+
+  markersMap.forEach(entry => {
+    try {
+      layerGroup.removeLayer(entry.marker)
+    } catch {}
+  })
+
+  markersMap = next
   maybeOpenMarker()
 }
 
 function maybeOpenMarker() {
-  if (!props.openMarkerId || !markerIndex.length) return
-  const found = markerIndex.find(x => x.id === props.openMarkerId)
-  if (found) {
-    try {
-      found.marker.openPopup()
-      const ll = found.marker.getLatLng()
-      if (ll) map.panTo(ll)
-    } catch {}
+  if (!props.openMarkerId || !markersMap.size) return
+  for (const entry of markersMap.values()) {
+    if (entry.id === props.openMarkerId) {
+      try {
+        entry.marker.openPopup()
+        const ll = entry.marker.getLatLng?.()
+        if (ll) {
+          programmaticMove = true
+          map.panTo(ll)
+        }
+      } catch {}
+      break
+    }
   }
 }
 
@@ -112,14 +178,20 @@ onUnmounted(() => {
     map.remove()
     map = null
   }
+  markersMap.clear()
+  layerGroup = null
 })
 
-watch(() => [props.center?.lat, props.center?.lng, props.zoom], () => {
-  updateLayers()
+watch(() => props.center, () => {
+  syncCenter()
+}, { deep: true })
+
+watch(() => props.zoom, () => {
+  syncZoom()
 })
 
 watch(() => props.markers, () => {
-  updateLayers()
+  syncMarkers()
 }, { deep: true })
 
 watch(() => props.openMarkerId, () => {
