@@ -1,26 +1,37 @@
 ﻿<template>
-  <section class="space-y-6 pb-12">
-    <!-- Header Strip -->
-    <header class="sticky top-0 z-30 bg-white/80 backdrop-blur border-b border-gray-200/60">
-      <div class="px-4 md:px-6 py-4 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <div class="flex items-center gap-3">
+  <section class="space-y-6">
+    <header class="px-4 md:px-6">
+      <div class="rounded-xl border bg-white shadow-sm px-4 py-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div class="space-y-2">
+          <div class="flex flex-wrap items-center gap-3">
             <h1 class="text-2xl font-semibold text-gray-900">Assignments</h1>
-            <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium"
-                  :class="isOnline ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'">
+            <span
+              class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
+              :class="isOnline ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'"
+            >
               <CheckCircle class="w-3.5 h-3.5" />
-              {{ isOnline ? 'Online' : 'Offline' }} - {{ nextPickupLabel }}
+              {{ isOnline ? 'Online' : 'Offline' }}
             </span>
           </div>
-          <p class="text-sm text-gray-600 mt-1">Stay on top of pickups, deliveries, and any special actions required.</p>
+          <div class="flex flex-wrap items-center gap-4 text-xs text-gray-500">
+            <span class="inline-flex items-center gap-1">
+              <Clock class="w-3.5 h-3.5" />
+              Next pickup: {{ nextPickupLabel }}
+            </span>
+            <span v-if="selectedAssignment" class="inline-flex items-center gap-1">
+              <MapPin class="w-3.5 h-3.5" />
+              {{ selectedAssignment.dropoffLabel }}
+            </span>
+          </div>
         </div>
-        <div class="flex items-center gap-2 flex-wrap">
+        <div class="flex flex-wrap items-center gap-2">
           <button
-            class="h-9 px-3 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-sm inline-flex items-center gap-2"
+            class="h-9 px-3 rounded-lg border text-sm inline-flex items-center gap-2 transition"
+            :class="autoAssignEnabled ? 'border-green-200 bg-green-50 text-green-700 hover:bg-green-100' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'"
             @click="toggleAutoAssign"
           >
             <component :is="autoAssignEnabled ? ToggleRight : ToggleLeft" class="w-4 h-4" />
-            <span>{{ autoAssignEnabled ? 'Auto-assignment on' : 'Enable auto-assignment' }}</span>
+            <span>{{ autoAssignEnabled ? 'Auto assign on' : 'Auto assign off' }}</span>
           </button>
           <button
             class="h-9 px-3 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-sm inline-flex items-center gap-2 text-red-700"
@@ -39,7 +50,6 @@
         </div>
       </div>
     </header>
-
     <section v-if="loadError" class="px-4 md:px-6">
       <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 flex items-start gap-3">
         <AlertTriangle class="w-4 h-4 mt-0.5" />
@@ -143,7 +153,7 @@
                   </div>
                   <div>
                     <div class="font-medium text-gray-800">Contact</div>
-                    <div>{{ assignment.contactName }} · {{ assignment.contactPhone }}</div>
+                    <div>{{ assignment.contactName }} - {{ assignment.contactPhone }}</div>
                   </div>
                 </div>
 
@@ -216,7 +226,7 @@
               >
                 <div class="flex flex-col">
                   <span class="font-medium text-gray-800">{{ task.label }}</span>
-                  <span class="text-xs text-gray-500">{{ task.assignmentLabel }} · {{ task.dueLabel }}</span>
+                  <span class="text-xs text-gray-500">{{ task.assignmentLabel }} - {{ task.dueLabel }}</span>
                 </div>
                 <button
                   class="h-7 w-7 rounded-full border flex items-center justify-center"
@@ -246,7 +256,7 @@
                 </div>
                 <div>
                   <div class="font-medium text-gray-900">{{ event.title }}</div>
-                  <div class="text-xs text-gray-500">{{ event.timestamp }} · {{ event.assignmentLabel }}</div>
+                  <div class="text-xs text-gray-500">{{ event.timestamp }} - {{ event.assignmentLabel }}</div>
                   <p class="text-xs text-gray-600 mt-1">{{ event.description }}</p>
                 </div>
               </li>
@@ -472,7 +482,7 @@ function handleSOS() {
 }
 
 function handleScan() {
-  toast.success('Opening scanner…')
+  toast.success('Opening scanner...')
 }
 
 function callContact(assignment: AssignmentExtended) {
