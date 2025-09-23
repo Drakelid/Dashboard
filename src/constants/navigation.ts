@@ -1,5 +1,5 @@
 import type { Component } from 'vue'
-import { Home, Truck, MessageSquare, History, User, HelpCircle } from 'lucide-vue-next'
+import { Home, Truck, ClipboardList, MessageSquare, History, User, HelpCircle } from 'lucide-vue-next'
 
 export type NavBadge =
   | { type: 'static'; value: string | number }
@@ -37,6 +37,12 @@ export const navSections: NavSection[] = [
         description: 'Your jobs and nearby pickups',
         icon: Truck,
         badge: { type: 'jobsTotal' },
+      },
+      {
+        path: '/assignments',
+        label: 'Assignments',
+        description: 'Manage delivery assignments',
+        icon: ClipboardList,
       },
       {
         path: '/messages',
