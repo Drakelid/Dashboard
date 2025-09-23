@@ -40,6 +40,19 @@
       </div>
     </header>
 
+    <section v-if="loadError" class="px-4 md:px-6">
+      <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 flex items-start gap-3">
+        <AlertTriangle class="w-4 h-4 mt-0.5" />
+        <div>
+          <div class="font-semibold">Assignments are unavailable</div>
+          <p class="mt-0.5">
+            {{ loadError }}. Showing sample assignments so you can preview the workflow.
+          </p>
+        </div>
+        <button class="ml-auto text-xs text-amber-700 underline" @click="refresh">Retry</button>
+      </div>
+    </section>
+
     <!-- Performance Strip -->
     <section class="px-4 md:px-6">
       <div class="grid gap-3 md:grid-cols-4">
@@ -150,6 +163,7 @@
                     Message
                   </button>
                   <button
+                    v-if="!assignment.localPicked"
                     class="h-8 px-3 text-xs rounded-lg bg-green-600 text-white hover:bg-green-700 inline-flex items-center gap-1"
                     @click.stop="markPickedUp(assignment)"
                   >
@@ -260,12 +274,14 @@ import { useDriverDeliveries } from '@/composables/useDriverDeliveries'
 import SmallMap from '@/components/SmallMap.vue'
 import AssignmentPackageModal from '@/components/AssignmentPackageModal.vue'
 import { toast } from '@/utils/toast'
+import { geocodeAddress } from '@/utils/geocode'
 import type { DriverDeliveryItem, Package } from '@/types/api'
 import {
   Check,
   CheckCircle,
   ClipboardList,
   Clock,
+  AlertTriangle,
   Map as MapIcon,
   MapPin,
   MessageSquare,
@@ -289,6 +305,8 @@ const taskDrawerOpen = ref(true)
 const timelineFilter = ref<'all' | 'ready' | 'in_transit' | 'needs_action'>('all')
 const selectedAssignmentId = ref<string | null>(route.query.focus as string || null)
 const packageModalOpen = ref(false)
+const pickedUpState = reactive<Record<string, boolean>>({})
+const assignmentCoords = reactive<Record<string, { lat: number; lng: number }>>({})
 
 onMounted(() => {
   if (!future.value) {
@@ -305,9 +323,17 @@ watch(
 
 const futureDeliveries = computed<DriverDeliveryItem[]>(() => future.value || [])
 
-const enrichedAssignments = computed(() =>
-  futureDeliveries.value.map((entry, index) => enrichAssignment(entry, index))
-)
+const loadError = computed(() => deliveriesError.value || null)
+
+const fallbackDeliveries = computed<DriverDeliveryItem[]>(() => {
+  if (!loadError.value) return []
+  return createFallbackDeliveries()
+})
+
+const enrichedAssignments = computed(() => {
+  const source = futureDeliveries.value.length ? futureDeliveries.value : fallbackDeliveries.value
+  return source.map((entry, index) => enrichAssignment(entry, index))
+})
 
 watch(
   enrichedAssignments,
@@ -456,6 +482,7 @@ function messageContact(assignment: AssignmentExtended) {
 }
 
 function markPickedUp(assignment: AssignmentExtended) {
+  pickedUpState[assignment.id] = true
   toast.success(`Marked assignment #${assignment.id} as picked up`)
 }
 
@@ -487,14 +514,16 @@ function enrichAssignment(entry: DriverDeliveryItem, index: number): AssignmentE
   const ecoPackages = packages.filter(pkg => !pkg.hazardous).length
   const earningsValue = deriveEarnings(entry)
   const pickupWindow = formatPickupWindow(entry)
-  const coordinates = resolveCoordinates(entry, index)
+  const coordinates = resolveCoordinates(id, entry, index)
   const tasks = createMicroTasks(id, status)
   const timeline = createTimelineEntries(id, entry, status)
+  const localPicked = !!pickedUpState[id]
+  const effectiveStatus = localPicked && status === 'ready' ? 'in_transit' : status
 
   return {
     id,
     original: entry,
-    status,
+    status: effectiveStatus,
     priority,
     priorityBadge: priority === 'urgent' ? 'bg-red-100 text-red-700' : priority === 'express' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700',
     priorityLabel: priority === 'standard' ? 'Standard' : priority === 'express' ? 'Express' : 'Urgent',
@@ -513,6 +542,7 @@ function enrichAssignment(entry: DriverDeliveryItem, index: number): AssignmentE
     tasks,
     timeline,
     completed: packages.every(pkg => (pkg.delivery_status || '').toLowerCase().includes('delivered')),
+    localPicked,
   }
 }
 
@@ -565,15 +595,64 @@ function formatPickupWindow(entry: DriverDeliveryItem) {
   return `${formatted.toLocaleDateString()} - ${formatted.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
 }
 
-function resolveCoordinates(entry: DriverDeliveryItem, index: number) {
-  const delivery: any = entry.delivery || {}
-  const lat = delivery?.latitude || delivery?.lat
-  const lng = delivery?.longitude || delivery?.lng
-  if (typeof lat === 'number' && typeof lng === 'number') return { lat, lng }
+const pendingGeocodes = new Set<string>()
+
+function resolveCoordinates(id: string, entry: DriverDeliveryItem, index: number) {
+  const stored = assignmentCoords[id]
+  if (stored) return stored
+
+  const direct = extractCoordinates(entry)
+  if (direct) {
+    assignmentCoords[id] = direct
+    return direct
+  }
+
+  if (!pendingGeocodes.has(id)) {
+    pendingGeocodes.add(id)
+    geocodeAssignment(id, entry).finally(() => pendingGeocodes.delete(id))
+  }
+
+  return fallbackCoordinate(index)
+}
+
+function extractCoordinates(entry: DriverDeliveryItem) {
+  const candidates: Array<{ lat?: any; lng?: any }> = []
+  const e: any = entry
+  const d: any = entry.delivery || {}
+
+  candidates.push({ lat: e.delivery_latitude, lng: e.delivery_longitude })
+  candidates.push({ lat: e.pickup_latitude, lng: e.pickup_longitude })
+  candidates.push({ lat: d.delivery_latitude, lng: d.delivery_longitude })
+  candidates.push({ lat: d.pickup_latitude, lng: d.pickup_longitude })
+  candidates.push({ lat: e.latitude, lng: e.longitude })
+
+  for (const pair of candidates) {
+    const lat = toNumber(pair.lat)
+    const lng = toNumber(pair.lng)
+    if (lat != null && lng != null) return { lat, lng }
+  }
+  return null
+}
+
+async function geocodeAssignment(id: string, entry: DriverDeliveryItem) {
+  const address = entry.delivery?.delivery_location || entry.location || entry.pickup_location
+  if (!address) return
+  const result = await geocodeAddress(address)
+  if (result) assignmentCoords[id] = result
+}
+
+function fallbackCoordinate(index: number) {
   const baseLat = 59.9139
   const baseLng = 10.7522
-  const offset = index * 0.01
+  const offset = index * 0.003
   return { lat: baseLat + offset, lng: baseLng + offset }
+}
+
+function toNumber(value: any): number | null {
+  if (value == null) return null
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null
+  const parsed = parseFloat(String(value))
+  return Number.isFinite(parsed) ? parsed : null
 }
 
 function createMicroTasks(assignmentId: string, status: AssignmentStatus): DrawerTaskInternal[] {
@@ -610,6 +689,151 @@ function createTimelineEntries(id: string, entry: DriverDeliveryItem, status: As
       color: status === 'needs_action' ? 'bg-red-500' : status === 'in_transit' ? 'bg-amber-500' : 'bg-blue-500',
       assignmentLabel: entry.delivery?.delivery_location || entry.location || id,
       sortOrder: baseTime.getTime() + 600000,
+    },
+  ]
+}
+
+function createFallbackDeliveries(): DriverDeliveryItem[] {
+  const now = new Date()
+  const today = now.toISOString().slice(0, 10)
+  return [
+    {
+      type: 'delivery',
+      delivery: {
+        id: 5012,
+        pickup_location: 'SamBring Logistics Hub',
+        delivery_location: 'Fjordgata 12, Oslo',
+        receiver: { name: 'Alex Johnson', phone: '+47 998 88 776' },
+        service: 'standard',
+        pickup_date: today,
+        pickup_time: '09:30:00',
+        delivery_date: today,
+        delivery_time: '10:15:00',
+        pickup_latitude: 59.9096,
+        pickup_longitude: 10.7449,
+        delivery_latitude: 59.9187,
+        delivery_longitude: 10.7523,
+      },
+      packages: [
+        {
+          id: 9101,
+          description: 'Organic produce crate',
+          weight: 4.5,
+          weight_unit: 'kg',
+          length: 40,
+          width: 35,
+          height: 25,
+          dimension_unit: 'cm',
+          hazardous: false,
+          fragile: true,
+          delivery_status: 'ready_for_pickup',
+        },
+      ],
+      location: 'Fjordgata 12, Oslo',
+      date: today,
+      time: '10:15:00',
+      pickup_location: 'SamBring Logistics Hub',
+      pickup_date: today,
+      pickup_time: '09:30:00',
+      pickup_latitude: 59.9096,
+      pickup_longitude: 10.7449,
+      delivery_latitude: 59.9187,
+      delivery_longitude: 10.7523,
+      actor: { name: 'Alex Johnson', phone: '+47 998 88 776' },
+      actor_type: 'receiver',
+      is_delivered: false,
+    },
+    {
+      type: 'delivery',
+      delivery: {
+        id: 5013,
+        pickup_location: 'Eco Market Warehouse',
+        delivery_location: 'Nordveien 22, Oslo',
+        receiver: { name: 'Maria Berg', phone: '+47 990 11 223' },
+        service: 'express',
+        pickup_date: today,
+        pickup_time: '11:00:00',
+        delivery_date: today,
+        delivery_time: '11:30:00',
+        pickup_latitude: 59.921,
+        pickup_longitude: 10.761,
+        delivery_latitude: 59.9265,
+        delivery_longitude: 10.7531,
+      },
+      packages: [
+        {
+          id: 9102,
+          description: 'Medical supplies',
+          weight: 2.1,
+          weight_unit: 'kg',
+          length: 30,
+          width: 25,
+          height: 20,
+          dimension_unit: 'cm',
+          hazardous: false,
+          fragile: false,
+          delivery_status: 'picked_up',
+        },
+      ],
+      location: 'Nordveien 22, Oslo',
+      date: today,
+      time: '11:30:00',
+      pickup_location: 'Eco Market Warehouse',
+      pickup_date: today,
+      pickup_time: '11:00:00',
+      pickup_latitude: 59.921,
+      pickup_longitude: 10.761,
+      delivery_latitude: 59.9265,
+      delivery_longitude: 10.7531,
+      actor: { name: 'Maria Berg', phone: '+47 990 11 223' },
+      actor_type: 'receiver',
+      is_delivered: false,
+    },
+    {
+      type: 'delivery',
+      delivery: {
+        id: 5014,
+        pickup_location: 'Downtown Electronics',
+        delivery_location: 'Storgata 84, Oslo',
+        receiver: { name: 'Leif Andersen', phone: '+47 955 44 332' },
+        service: 'same day',
+        pickup_date: today,
+        pickup_time: '13:15:00',
+        delivery_date: today,
+        delivery_time: '14:00:00',
+        pickup_latitude: 59.9175,
+        pickup_longitude: 10.733,
+        delivery_latitude: 59.9121,
+        delivery_longitude: 10.7608,
+      },
+      packages: [
+        {
+          id: 9103,
+          description: 'Refurbished laptop',
+          weight: 1.7,
+          weight_unit: 'kg',
+          length: 35,
+          width: 25,
+          height: 5,
+          dimension_unit: 'cm',
+          hazardous: false,
+          fragile: true,
+          delivery_status: 'in_transit',
+        },
+      ],
+      location: 'Storgata 84, Oslo',
+      date: today,
+      time: '14:00:00',
+      pickup_location: 'Downtown Electronics',
+      pickup_date: today,
+      pickup_time: '13:15:00',
+      pickup_latitude: 59.9175,
+      pickup_longitude: 10.733,
+      delivery_latitude: 59.9121,
+      delivery_longitude: 10.7608,
+      actor: { name: 'Leif Andersen', phone: '+47 955 44 332' },
+      actor_type: 'receiver',
+      is_delivered: false,
     },
   ]
 }
