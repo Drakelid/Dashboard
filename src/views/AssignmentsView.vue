@@ -324,22 +324,13 @@ watch(
 const loadError = computed(() => deliveriesError.value || null)
 
 const fallbackDeliveries = createFallbackDeliveries()
-const displayAssignments = ref<DriverDeliveryItem[]>(fallbackDeliveries)
 
-watch(
-  () => future.value,
-  value => {
-    if (value && value.length) {
-      displayAssignments.value = value
-    }
-  },
-  { immediate: true }
-)
-
-watch(loadError, err => {
-  if (err && (!future.value || !future.value.length)) {
-    displayAssignments.value = fallbackDeliveries
-  }
+const displayAssignments = computed<DriverDeliveryItem[]>(() => {
+  const live = future.value
+  if (live && live.length) return live
+  if (deliveriesLoading.value) return fallbackDeliveries
+  if (loadError.value) return fallbackDeliveries
+  return fallbackDeliveries
 })
 
 const enrichedAssignments = computed(() =>
