@@ -173,7 +173,7 @@
                     Message
                   </button>
                   <button
-                    v-if="!assignment.localPicked"
+                    v-if="assignment.status !== 'in_transit' && !assignment.localPicked"
                     class="h-8 px-3 text-xs rounded-lg bg-green-600 text-white hover:bg-green-700 inline-flex items-center gap-1"
                     @click.stop="markPickedUp(assignment)"
                   >
@@ -524,13 +524,13 @@ function handleScan() {
 
 function handleScanResult(value: string) {
   scannerOpen.value = false
-  toast.success('Scanned: ' + value)
+  const preview = value.length > 120 ? value.slice(0, 117) + "..." : value
+  toast.success('Scanned: ' + preview)
 }
 
 function handleScanError(message: string) {
   toast.error(message)
 }
-
 function callContact(assignment: AssignmentExtended) {
   toast.info(`Dialing ${assignment.contactPhone}`)
 }
@@ -942,5 +942,3 @@ type TimelineEvent = {
 
 type TaskPriority = 'urgent' | 'express' | 'standard'
 </script>
-
-

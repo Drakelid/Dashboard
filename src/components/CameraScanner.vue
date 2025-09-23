@@ -2,7 +2,7 @@
   <teleport to="body">
     <div v-if="open" class="fixed inset-0 z-[1400] overflow-y-auto bg-black/60">
       <div class="flex min-h-full items-center justify-center p-4 md:p-6">
-        <div class="relative w-full max-w-xl rounded-2xl bg-white shadow-2xl border border-gray-100 flex flex-col overflow-hidden max-h-[min(90vh,640px)]">
+        <div class="relative w-full max-w-xl rounded-2xl bg-white shadow-2xl border border-gray-100 flex flex-col overflow-hidden max-h-[min(90vh,680px)]">
           <header class="px-4 py-3 border-b flex items-center justify-between gap-3">
             <div>
               <h2 class="text-lg font-semibold text-gray-900">Scan label / QR</h2>
@@ -17,7 +17,7 @@
             </button>
           </header>
 
-          <section class="relative bg-black flex-1 min-h-[260px]">
+          <section class="relative bg-black flex-1 min-h-[280px]">
             <video
               ref="videoEl"
               class="absolute inset-0 h-full w-full object-cover"
@@ -29,9 +29,9 @@
               <div class="h-48 w-48 border-2 border-white/70 rounded-lg"></div>
             </div>
             <div v-if="!supportsCamera" class="absolute inset-0 grid place-items-center bg-black/70 px-4 text-center text-white text-sm">
-              Camera access is not available in this browser.
+              {{ statusMessage }}
             </div>
-            <div v-if="permissionDenied" class="absolute inset-0 grid place-items-center bg-black/70 px-4 text-center text-white text-sm">
+            <div v-else-if="permissionDenied" class="absolute inset-0 grid place-items-center bg-black/70 px-4 text-center text-white text-sm">
               We couldn't access the camera. Please allow camera permissions and try again.
             </div>
           </section>
@@ -48,8 +48,8 @@
                 v-model="selectedDeviceId"
                 :disabled="initializing"
               >
-                <option v-for="device in availableDevices" :key="device.deviceId" :value="device.deviceId">
-                  {{ device.label || `Camera ${deviceIndex(device)}` }}
+                <option v-for="(device, index) in availableDevices" :key="device.deviceId" :value="device.deviceId">
+                  {{ device.label || `Camera ${index + 1}` }}
                 </option>
               </select>
             </div>
@@ -83,12 +83,19 @@ import { onBeforeUnmount, ref, watch } from 'vue'
 const props = defineProps<{ open: boolean }>()
 const emit = defineEmits<{ (e: 'close'): void; (e: 'decoded', payload: string): void; (e: 'error', payload: string): void }>()
 
-const supportsCamera = typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia
+const isLocalhost = typeof window !== 'undefined' && /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname)
+const secureContext = typeof window !== 'undefined' ? (window.isSecureContext || isLocalhost) : true
+const supportsCamera = typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia && secureContext
+const hasBarcodeDetector = typeof window !== 'undefined' && 'BarcodeDetector' in window
 
 const videoEl = ref<HTMLVideoElement | null>(null)
 const availableDevices = ref<MediaDeviceInfo[]>([])
 const selectedDeviceId = ref<string | null>(null)
-const statusMessage = ref('Initializing camera...')
+const statusMessage = ref(
+  secureContext
+    ? 'Initializing camera...'
+    : 'Camera access requires HTTPS (or use localhost).'
+)
 const initializing = ref(false)
 const permissionDenied = ref(false)
 
@@ -96,8 +103,29 @@ let controls: IScannerControls | null = null
 let reader: BrowserMultiFormatReader | null = null
 let hasResult = false
 let ignoreDeviceChange = false
+let permissionsRequested = false
+let detectionFrame = 0
+let barcodeDetector: any = null
+let stream: MediaStream | null = null
 
-const deviceIndex = (device: MediaDeviceInfo) => availableDevices.value.indexOf(device) + 1
+async function ensureCameraAccess() {
+  if (!supportsCamera) {
+    emit('error', statusMessage.value)
+    return false
+  }
+  if (permissionsRequested) return true
+  try {
+    const tempStream = await navigator.mediaDevices.getUserMedia({ video: true })
+    tempStream.getTracks().forEach(track => track.stop())
+    permissionsRequested = true
+    return true
+  } catch (error: any) {
+    permissionDenied.value = true
+    statusMessage.value = error?.message || 'Unable to access the camera.'
+    emit('error', statusMessage.value)
+    return false
+  }
+}
 
 async function loadDevices() {
   try {
@@ -117,42 +145,89 @@ async function loadDevices() {
   }
 }
 
+function stopBarcodeLoop() {
+  if (detectionFrame) {
+    cancelAnimationFrame(detectionFrame)
+    detectionFrame = 0
+  }
+}
+
 async function stop() {
   hasResult = false
+  stopBarcodeLoop()
   controls?.stop()
   controls = null
   reader?.reset()
-  reader = null
-  const stream = videoEl.value?.srcObject as MediaStream | null
   if (stream) {
     stream.getTracks().forEach(track => track.stop())
+    stream = null
   }
   if (videoEl.value) {
+    try { videoEl.value.pause() } catch {}
     videoEl.value.srcObject = null
   }
 }
 
-async function start() {
-  if (!supportsCamera || !videoEl.value) {
-    if (!supportsCamera) {
-      statusMessage.value = 'Camera access is not supported in this browser.'
-      emit('error', statusMessage.value)
-    }
-    return
-  }
-  initializing.value = true
-  permissionDenied.value = false
-  statusMessage.value = 'Requesting camera...'
-  if (!reader) reader = new BrowserMultiFormatReader()
+function handleDetectedValue(value: string) {
+  if (hasResult) return
+  hasResult = true
+  emit('decoded', value)
+  handleCancel()
+}
 
+async function runBarcodeLoop() {
+  if (!barcodeDetector || !videoEl.value || !props.open) return
   try {
-    controls = await reader.decodeFromVideoDevice(selectedDeviceId.value ?? undefined, videoEl.value, (result, error) => {
+    const results = await barcodeDetector.detect(videoEl.value)
+    if (results && results.length) {
+      handleDetectedValue(results[0].rawValue || results[0].rawValue)
+      return
+    }
+  } catch (error: any) {
+    if (error?.name === 'NotFoundError') {
+      // expected when no code in frame
+    } else {
+      statusMessage.value = error?.message || 'Unable to read code. Please try again.'
+    }
+  }
+  detectionFrame = requestAnimationFrame(runBarcodeLoop)
+}
+
+async function startWithBarcodeDetector(constraints: MediaStreamConstraints) {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia(constraints)
+    if (!videoEl.value) return
+    videoEl.value.srcObject = stream
+    await videoEl.value.play().catch(() => {})
+    if (!barcodeDetector) {
+      try {
+        const supported = await (window as any).BarcodeDetector.getSupportedFormats?.()
+        barcodeDetector = new (window as any).BarcodeDetector({ formats: supported || undefined })
+      } catch {
+        barcodeDetector = new (window as any).BarcodeDetector()
+      }
+    }
+    statusMessage.value = 'Align the code inside the frame.'
+    stopBarcodeLoop()
+    detectionFrame = requestAnimationFrame(runBarcodeLoop)
+  } catch (error: any) {
+    if (error?.name === 'NotAllowedError') {
+      permissionDenied.value = true
+      statusMessage.value = 'Camera access was denied.'
+    } else {
+      statusMessage.value = error?.message || 'Failed to start camera.'
+    }
+    emit('error', statusMessage.value)
+    await stop()
+  }
+}
+
+async function startWithZxing(constraints: MediaStreamConstraints) {
+  if (!reader) reader = new BrowserMultiFormatReader()
+  try {
+    controls = await reader.decodeFromConstraints(constraints, videoEl.value!, (result, error) => {
       if (result) {
-        if (hasResult) return
-        hasResult = true
-        statusMessage.value = 'Code detected'
-        emit('decoded', result.getText())
-        stop().finally(() => emit('close'))
+        handleDetectedValue(result.getText())
       } else if (error && error.name !== 'NotFoundException') {
         statusMessage.value = error.message || 'Unable to read code. Please try again.'
       }
@@ -167,9 +242,31 @@ async function start() {
     }
     emit('error', statusMessage.value)
     await stop()
-  } finally {
-    initializing.value = false
   }
+}
+
+async function start() {
+  if (!supportsCamera || !videoEl.value) return
+  initializing.value = true
+  permissionDenied.value = false
+  statusMessage.value = 'Requesting camera...'
+
+  const constraints: MediaStreamConstraints = {
+    video: selectedDeviceId.value
+      ? { deviceId: { exact: selectedDeviceId.value } }
+      : { facingMode: 'environment' }
+  }
+
+  hasResult = false
+  stopBarcodeLoop()
+
+  if (hasBarcodeDetector) {
+    await startWithBarcodeDetector(constraints)
+  } else {
+    await startWithZxing(constraints)
+  }
+
+  initializing.value = false
 }
 
 async function restart() {
@@ -186,6 +283,8 @@ watch(
   () => props.open,
   async open => {
     if (open) {
+      const ready = await ensureCameraAccess()
+      if (!ready) return
       statusMessage.value = 'Initializing camera...'
       ignoreDeviceChange = true
       await loadDevices()
