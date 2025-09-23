@@ -325,15 +325,11 @@ const loadError = computed(() => deliveriesError.value || null)
 
 const fallbackDeliveries = createFallbackDeliveries()
 
-const assignmentsSource = computed<DriverDeliveryItem[]>(() => {
+const enrichedAssignments = computed(() => {
   const live = future.value
-  if (live && live.length) return live
-  return loadError.value ? fallbackDeliveries : []
+  const source = live && live.length ? live : loadError.value ? fallbackDeliveries : fallbackDeliveries
+  return source.map((entry, index) => enrichAssignment(entry, index))
 })
-
-const enrichedAssignments = computed(() =>
-  assignmentsSource.value.map((entry, index) => enrichAssignment(entry, index))
-)
 
 watch(
   enrichedAssignments,
