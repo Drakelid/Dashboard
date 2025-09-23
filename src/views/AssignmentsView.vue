@@ -174,7 +174,7 @@
           <div class="rounded-xl border bg-white shadow-sm overflow-hidden">
             <div class="px-4 py-3 border-b flex items-center justify-between">
               <div class="flex items-center gap-2 text-sm font-semibold text-gray-800">
-                <Map class="w-4 h-4" /> Live Route Map
+                <MapIcon class="w-4 h-4" /> Live Route Map
               </div>
               <span class="text-xs text-gray-500">Auto-focused on selected assignment</span>
             </div>
@@ -266,7 +266,7 @@ import {
   CheckCircle,
   ClipboardList,
   Clock,
-  Map,
+  Map as MapIcon,
   MapPin,
   MessageSquare,
   Navigation,
