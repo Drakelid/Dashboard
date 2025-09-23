@@ -317,6 +317,7 @@ const selectedAssignmentId = ref<string | null>(normalizeFocus(route.query.focus
 const packageModalOpen = ref(false)
 const pickedUpState = reactive<Record<string, boolean>>({})
 const assignmentCoords = reactive<Record<string, { lat: number; lng: number }>>({})
+const pendingGeocodes = new Set<string>()
 
 onMounted(() => {
   if (!future.value) {
@@ -635,7 +636,6 @@ function formatPickupWindow(entry: DriverDeliveryItem) {
   return `${formatted.toLocaleDateString()} - ${formatted.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
 }
 
-const pendingGeocodes = new Set<string>()
 
 function resolveCoordinates(id: string, entry: DriverDeliveryItem, index: number) {
   const stored = assignmentCoords[id]
