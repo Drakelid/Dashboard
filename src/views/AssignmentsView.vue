@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <section class="space-y-6">
     <header class="px-4 md:px-6">
       <div class="rounded-xl border bg-white shadow-sm px-4 py-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -313,7 +313,7 @@ const isOnline = ref(true)
 const autoAssignEnabled = ref(true)
 const taskDrawerOpen = ref(true)
 const timelineFilter = ref<'all' | 'ready' | 'in_transit' | 'needs_action'>('all')
-const selectedAssignmentId = ref<string | null>(route.query.focus as string || null)
+const selectedAssignmentId = ref<string | null>(normalizeFocus(route.query.focus))
 const packageModalOpen = ref(false)
 const pickedUpState = reactive<Record<string, boolean>>({})
 const assignmentCoords = reactive<Record<string, { lat: number; lng: number }>>({})
@@ -327,7 +327,10 @@ onMounted(() => {
 watch(
   () => route.query.focus,
   value => {
-    if (typeof value === 'string') selectAssignment(value)
+    const focusId = normalizeFocus(value)
+    if (focusId) {
+      selectAssignment(focusId)
+    }
   }
 )
 
@@ -351,13 +354,20 @@ watch(
   enrichedAssignments,
   value => {
     if (!value.length) {
+      updateFocusQuery(null)
       selectedAssignmentId.value = null
       return
     }
     if (!selectedAssignmentId.value) {
-      selectedAssignmentId.value = value[0].id
-    } else if (!value.some(item => item.id === selectedAssignmentId.value)) {
-      selectedAssignmentId.value = value[0].id
+      const firstId = value[0].id
+      selectedAssignmentId.value = firstId
+      updateFocusQuery(firstId)
+      return
+    }
+    if (!value.some(item => item.id === selectedAssignmentId.value)) {
+      const firstId = value[0].id
+      selectedAssignmentId.value = firstId
+      updateFocusQuery(firstId)
     }
   },
   { immediate: true }
@@ -469,7 +479,25 @@ const performanceMetrics = computed(() => {
 
 function selectAssignment(id: string) {
   selectedAssignmentId.value = id
-  router.replace({ query: { ...route.query, focus: id } })
+  updateFocusQuery(id)
+}
+
+function updateFocusQuery(id: string | null) {
+  const normalizedTarget = id ?? null
+  const normalizedCurrent = normalizeFocus(route.query.focus)
+  if (normalizedCurrent === normalizedTarget) return
+  const nextQuery: Record<string, any> = { ...route.query }
+  if (normalizedTarget) nextQuery.focus = normalizedTarget
+  else delete nextQuery.focus
+  router.replace({ query: nextQuery })
+}
+
+function normalizeFocus(value: unknown): string | null {
+  if (Array.isArray(value)) {
+    const first = value.find(item => typeof item === 'string' && item.length > 0)
+    return (first as string | undefined) || null
+  }
+  return typeof value === 'string' && value.length ? value : null
 }
 
 function toggleAutoAssign() {
