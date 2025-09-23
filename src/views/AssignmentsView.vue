@@ -321,19 +321,19 @@ watch(
   }
 )
 
-const futureDeliveries = computed<DriverDeliveryItem[]>(() => future.value || [])
-
 const loadError = computed(() => deliveriesError.value || null)
 
-const fallbackDeliveries = computed<DriverDeliveryItem[]>(() => {
-  if (!loadError.value) return []
-  return createFallbackDeliveries()
+const fallbackDeliveries = createFallbackDeliveries()
+
+const assignmentsSource = computed<DriverDeliveryItem[]>(() => {
+  const live = future.value
+  if (live && live.length) return live
+  return loadError.value ? fallbackDeliveries : []
 })
 
-const enrichedAssignments = computed(() => {
-  const source = futureDeliveries.value.length ? futureDeliveries.value : fallbackDeliveries.value
-  return source.map((entry, index) => enrichAssignment(entry, index))
-})
+const enrichedAssignments = computed(() =>
+  assignmentsSource.value.map((entry, index) => enrichAssignment(entry, index))
+)
 
 watch(
   enrichedAssignments,
