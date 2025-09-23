@@ -1,74 +1,76 @@
 <template>
   <teleport to="body">
-    <div v-if="open" class="fixed inset-0 z-[1400] flex items-center justify-center bg-black/50 px-4 py-6">
-      <div class="relative w-full max-w-xl rounded-2xl bg-white shadow-2xl border border-gray-100 overflow-hidden">
-        <header class="px-4 py-3 border-b flex items-center justify-between gap-3">
-          <div>
-            <h2 class="text-lg font-semibold text-gray-900">Scan label / QR</h2>
-            <p class="text-xs text-gray-500">Align the code within the frame below.</p>
-          </div>
-          <button
-            class="h-9 w-9 rounded-full border border-gray-200 bg-white hover:bg-gray-50 grid place-items-center"
-            @click="handleCancel"
-            aria-label="Close"
-          >
-            X
-          </button>
-        </header>
+    <div v-if="open" class="fixed inset-0 z-[1400] overflow-y-auto bg-black/60">
+      <div class="flex min-h-full items-center justify-center p-4 md:p-6">
+        <div class="relative w-full max-w-xl rounded-2xl bg-white shadow-2xl border border-gray-100 flex flex-col overflow-hidden max-h-[min(90vh,640px)]">
+          <header class="px-4 py-3 border-b flex items-center justify-between gap-3">
+            <div>
+              <h2 class="text-lg font-semibold text-gray-900">Scan label / QR</h2>
+              <p class="text-xs text-gray-500">Align the code within the frame below.</p>
+            </div>
+            <button
+              class="h-9 w-9 rounded-full border border-gray-200 bg-white hover:bg-gray-50 grid place-items-center"
+              @click="handleCancel"
+              aria-label="Close"
+            >
+              ?
+            </button>
+          </header>
 
-        <section class="relative bg-black">
-          <video
-            ref="videoEl"
-            class="w-full aspect-[3/4] object-cover"
-            autoplay
-            playsinline
-            muted
-          ></video>
-          <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <div class="h-48 w-48 border-2 border-white/70 rounded-lg"></div>
-          </div>
-          <div v-if="!supportsCamera" class="absolute inset-0 grid place-items-center bg-black/70 px-4 text-center text-white text-sm">
-            Camera access is not available in this browser.
-          </div>
-          <div v-if="permissionDenied" class="absolute inset-0 grid place-items-center bg-black/70 px-4 text-center text-white text-sm">
-            We couldn't access the camera. Please allow camera permissions and try again.
-          </div>
-        </section>
+          <section class="relative bg-black flex-1 min-h-[260px]">
+            <video
+              ref="videoEl"
+              class="absolute inset-0 h-full w-full object-cover"
+              autoplay
+              playsinline
+              muted
+            ></video>
+            <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <div class="h-48 w-48 border-2 border-white/70 rounded-lg"></div>
+            </div>
+            <div v-if="!supportsCamera" class="absolute inset-0 grid place-items-center bg-black/70 px-4 text-center text-white text-sm">
+              Camera access is not available in this browser.
+            </div>
+            <div v-if="permissionDenied" class="absolute inset-0 grid place-items-center bg-black/70 px-4 text-center text-white text-sm">
+              We couldn't access the camera. Please allow camera permissions and try again.
+            </div>
+          </section>
 
-        <section class="px-4 py-3 space-y-3">
-          <div class="text-xs text-gray-500 border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 min-h-[40px]">
-            {{ statusMessage }}
-          </div>
+          <section class="px-4 py-3 space-y-3">
+            <div class="text-xs text-gray-600 border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 min-h-[40px]">
+              {{ statusMessage }}
+            </div>
 
-          <div v-if="availableDevices.length > 1" class="flex items-center gap-2">
-            <label class="text-xs font-medium text-gray-600">Camera</label>
-            <select
-              class="flex-1 h-9 rounded border bg-white px-2 text-sm"
-              v-model="selectedDeviceId"
+            <div v-if="availableDevices.length > 1" class="flex items-center gap-2">
+              <label class="text-xs font-medium text-gray-600">Camera</label>
+              <select
+                class="flex-1 h-9 rounded border bg-white px-2 text-sm"
+                v-model="selectedDeviceId"
+                :disabled="initializing"
+              >
+                <option v-for="device in availableDevices" :key="device.deviceId" :value="device.deviceId">
+                  {{ device.label || `Camera ${deviceIndex(device)}` }}
+                </option>
+              </select>
+            </div>
+          </section>
+
+          <footer class="px-4 py-3 border-t flex items-center justify-between bg-white">
+            <button
+              class="h-9 px-3 rounded border bg-white hover:bg-gray-50 text-sm"
+              @click="handleCancel"
+            >
+              Cancel
+            </button>
+            <button
+              class="h-9 px-3 rounded border bg-white hover:bg-gray-50 text-sm"
+              @click="restart"
               :disabled="initializing"
             >
-              <option v-for="device in availableDevices" :key="device.deviceId" :value="device.deviceId">
-                {{ device.label || `Camera ${deviceIndex(device)}` }}
-              </option>
-            </select>
-          </div>
-        </section>
-
-        <footer class="px-4 py-3 border-t flex items-center justify-between">
-          <button
-            class="h-9 px-3 rounded border bg-white hover:bg-gray-50 text-sm"
-            @click="handleCancel"
-          >
-            Cancel
-          </button>
-          <button
-            class="h-9 px-3 rounded border bg-white hover:bg-gray-50 text-sm"
-            @click="restart"
-            :disabled="initializing"
-          >
-            Restart
-          </button>
-        </footer>
+              Restart
+            </button>
+          </footer>
+        </div>
       </div>
     </div>
   </teleport>
