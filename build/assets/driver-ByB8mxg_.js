@@ -1,1 +1,0 @@
-import{G as r}from"./index-Cp0ke4Zo.js";async function t(e){return r.get("/api/driver/deliveries/",{query:e?{filter:e}:void 0})}async function n(){return r.get("/api/driver/profile/")}export{n as g,t as l};
