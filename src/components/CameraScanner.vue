@@ -18,7 +18,7 @@
           </header>
 
           <section class="relative bg-black flex-1">
-            <div class="relative w-full h-[min(70vh,480px)] min-h-[280px] max-h-[520px] overflow-hidden rounded-xl">
+            <div class="relative w-full overflow-hidden rounded-xl" style="height: clamp(320px, 70vh, 520px);">
               <video
                 ref="videoEl"
                 class="absolute inset-0 h-full w-full object-cover"
