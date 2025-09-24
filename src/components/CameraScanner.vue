@@ -312,6 +312,7 @@ async function startWithZxing(constraints: MediaStreamConstraints) {
     debugLog('startWithZxing:stream acquired', { trackLabel: mediaStream.getVideoTracks()[0]?.label })
     stream = mediaStream
     bindStreamToVideo(mediaStream)
+    await playVideo(video)
 
     const assignControls = (ctrl?: IScannerControls | null) => {
       if (ctrl) controls = ctrl
