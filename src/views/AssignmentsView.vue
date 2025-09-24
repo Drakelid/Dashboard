@@ -1,3 +1,4 @@
+<template>
   <section class="space-y-6">
     <header class="px-4 md:px-6">
       <div class="rounded-xl border bg-white shadow-sm px-4 py-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
