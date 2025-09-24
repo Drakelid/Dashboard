@@ -213,20 +213,24 @@ async function playVideo(video: HTMLVideoElement) {
     if (!video.paused && !video.ended) {
       streamReady.value = true
       statusMessage.value = 'Align the code inside the frame.'
+      debugLog('playVideo: video already playing')
       return
     }
     await video.play()
     streamReady.value = true
     statusMessage.value = 'Align the code inside the frame.'
+    debugLog('playVideo: video.play() resolved')
   } catch (error: any) {
     if (!video.paused && !video.ended) {
       streamReady.value = true
       statusMessage.value = 'Align the code inside the frame.'
+      debugLog('playVideo: playback error but video reporting playing')
       return
     }
     streamReady.value = false
     statusMessage.value = error?.message || 'Unable to start video playback.'
     emit('error', statusMessage.value)
+    debugLog('playVideo: failed to start', error)
   }
 }
 
@@ -313,6 +317,9 @@ async function startWithZxing(constraints: MediaStreamConstraints) {
     stream = mediaStream
     bindStreamToVideo(mediaStream)
     await playVideo(video)
+    streamReady.value = true
+    statusMessage.value = 'Align the code inside the frame.'
+    debugLog('startWithZxing: forcing streamReady true after playVideo')
 
     const assignControls = (ctrl?: IScannerControls | null) => {
       if (ctrl) controls = ctrl
