@@ -104,7 +104,11 @@ let hasResult = false
 let ignoreDeviceChange = false
 let permissionsRequested = false
 let detectionFrame = 0
-let barcodeDetector: BarcodeDetector | null = null
+type BarcodeDetectorInstance = {
+  detect: (source: CanvasImageSource) => Promise<Array<{ rawValue?: string }>>
+}
+
+let barcodeDetector: BarcodeDetectorInstance | null = null
 let stream: MediaStream | null = null
 
 async function ensureCameraAccess() {
@@ -156,9 +160,7 @@ async function stop() {
   stopBarcodeLoop()
   controls?.stop()
   controls = null
-  if (reader) {
-    try { reader.reset() } catch {}
-  }
+  // BrowserMultiFormatReader in @zxing/browser 0.1.x does not expose a public reset API; rely on controls.stop instead.
   if (stream) {
     stream.getTracks().forEach(track => track.stop())
     stream = null
@@ -256,15 +258,48 @@ async function startWithBarcodeDetector(constraints: MediaStreamConstraints) {
 async function startWithZxing(constraints: MediaStreamConstraints) {
   if (!reader) reader = new BrowserMultiFormatReader()
   try {
-    stream = await navigator.mediaDevices.getUserMedia(constraints)
-    bindStreamToVideo(stream)
-    reader.decodeFromVideoElementContinuously(videoEl.value!, (result, error) => {
+    const deviceId = (() => {
+      const video = constraints.video
+      if (video && typeof video === 'object' && 'deviceId' in video && video.deviceId) {
+        const specifier = video.deviceId as MediaTrackConstraintSet['deviceId']
+        if (typeof specifier === 'string') return specifier
+        if (specifier && typeof specifier === 'object' && 'exact' in specifier) {
+          return specifier.exact as string
+        }
+      }
+      return undefined
+    })()
+
+    const video = videoEl.value!
+    streamReady.value = false
+    statusMessage.value = 'Starting scanner...'
+
+    const assignControls = (ctrl?: IScannerControls | null) => {
+      if (ctrl) controls = ctrl
+    }
+
+    controls = await reader.decodeFromVideoDevice(deviceId, video, (result, error, ctrl) => {
+      assignControls(ctrl)
       if (result) {
         handleDetectedValue(result.getText())
+        ctrl?.stop()
       } else if (error && error.name !== 'NotFoundException') {
         statusMessage.value = error.message || 'Unable to read code. Please try again.'
       }
     })
+
+    stream = (video.srcObject as MediaStream) || null
+    hasStream.value = !!stream
+
+    if (video.readyState >= 2) {
+      await playVideo(video)
+    } else {
+      video.onloadedmetadata = () => {
+        if (video) {
+          playVideo(video)
+        }
+      }
+    }
   } catch (error: any) {
     if (error?.name === 'NotAllowedError') {
       permissionDenied.value = true
