@@ -18,7 +18,7 @@
           </header>
 
           <section class="relative bg-black flex-1">
-            <div class="relative w-full aspect-[3/4] min-h-[280px]">
+            <div class="relative w-full h-[min(70vh,480px)] min-h-[280px] max-h-[520px] overflow-hidden rounded-xl">
               <video
                 ref="videoEl"
                 class="absolute inset-0 h-full w-full object-cover"
