@@ -278,16 +278,6 @@ async function startWithZxing(constraints: MediaStreamConstraints) {
     streamReady.value = false
     statusMessage.value = 'Starting scanner...'
 
-    if (!hasStream.value) {
-      try {
-        stream = await navigator.mediaDevices.getUserMedia(constraints)
-        bindStreamToVideo(stream)
-      } catch (mediaError: any) {
-        statusMessage.value = mediaError?.message || 'Failed to access camera stream.'
-        emit('error', statusMessage.value)
-      }
-    }
-
     let metadataHandled = false
     const ensurePlaying = () => {
       if (metadataHandled) return
@@ -305,26 +295,62 @@ async function startWithZxing(constraints: MediaStreamConstraints) {
       if (ctrl) controls = ctrl
     }
 
-    const ctrl = await reader.decodeFromConstraints(constraints, video, (result, error, innerCtrl) => {
-      assignControls(innerCtrl)
-      if (!metadataHandled && video.readyState >= 2) {
-        ensurePlaying()
-      }
-      if (result) {
-        handleDetectedValue(result.getText())
-        innerCtrl?.stop()
-      } else if (error && error.name !== 'NotFoundException') {
-        statusMessage.value = error.message || 'Unable to read code. Please try again.'
-      }
-    })
+    const deviceId = selectedDeviceId.value || undefined
 
-    assignControls(ctrl)
+    const startWithDevice = async () => {
+      const ctrl = await reader!.decodeFromVideoDevice(deviceId, video, (result, error, innerCtrl) => {
+        assignControls(innerCtrl)
+        if (!metadataHandled && video.readyState >= 2) {
+          ensurePlaying()
+        }
+        if (result) {
+          handleDetectedValue(result.getText())
+          innerCtrl?.stop()
+        } else if (error && error.name !== 'NotFoundException') {
+          statusMessage.value = error.message || 'Unable to read code. Please try again.'
+        }
+      })
+      assignControls(ctrl)
+    }
 
-    stream = (video.srcObject as MediaStream) || null
+    try {
+      await startWithDevice()
+    } catch (deviceErr) {
+      if (import.meta.env.DEV) {
+        console.debug('[CameraScanner] decodeFromVideoDevice failed', deviceErr)
+      }
+      const mediaStream = await navigator.mediaDevices.getUserMedia(constraints)
+      bindStreamToVideo(mediaStream)
+      stream = mediaStream
+      const ctrl = await reader.decodeFromStream(mediaStream, video, (result, error, innerCtrl) => {
+        assignControls(innerCtrl)
+        if (!metadataHandled && video.readyState >= 2) {
+          ensurePlaying()
+        }
+        if (result) {
+          handleDetectedValue(result.getText())
+          innerCtrl?.stop()
+        } else if (error && error.name !== 'NotFoundException') {
+          statusMessage.value = error.message || 'Unable to read code. Please try again.'
+        }
+      })
+      assignControls(ctrl)
+    }
+
+    if (!stream) {
+      stream = (video.srcObject as MediaStream) || null
+    }
     hasStream.value = !!stream
+
+    if (!stream) {
+      statusMessage.value = 'Camera stream unavailable.'
+      emit('error', statusMessage.value)
+    }
 
     if (video.readyState >= 2) {
       ensurePlaying()
+    } else if (import.meta.env.DEV) {
+      console.debug('[CameraScanner] waiting for video.readyState >= 2, current:', video.readyState)
     }
   } catch (error: any) {
     if (error?.name === 'NotAllowedError') {
