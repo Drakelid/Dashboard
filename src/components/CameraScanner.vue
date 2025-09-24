@@ -17,19 +17,21 @@
             </button>
           </header>
 
-          <section class="relative bg-black flex-1 min-h-[280px]">
-            <video
-              ref="videoEl"
-              class="absolute inset-0 h-full w-full object-cover"
-              autoplay
-              playsinline
-              muted
-            ></video>
-            <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <div class="h-48 w-48 border-2 border-white/70 rounded-lg"></div>
-            </div>
-            <div v-if="!streamReady" class="absolute inset-0 grid place-items-center bg-black/70 px-4 text-center text-white text-sm">
-              {{ statusMessage }}
+          <section class="relative bg-black flex-1">
+            <div class="relative w-full aspect-[3/4] min-h-[280px]">
+              <video
+                ref="videoEl"
+                class="absolute inset-0 h-full w-full object-cover"
+                autoplay
+                playsinline
+                muted
+              ></video>
+              <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
+                <div class="h-48 w-48 border-2 border-white/70 rounded-lg"></div>
+              </div>
+              <div v-if="!streamReady" class="absolute inset-0 grid place-items-center bg-black/70 px-4 text-center text-white text-sm">
+                {{ statusMessage }}
+              </div>
             </div>
           </section>
 
