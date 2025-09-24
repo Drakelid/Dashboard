@@ -85,6 +85,11 @@ const secureContext = typeof window !== 'undefined' ? (window.isSecureContext ||
 const supportsCamera = typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia && secureContext
 const hasBarcodeDetector = typeof window !== 'undefined' && 'BarcodeDetector' in window
 
+function debugLog(...args: any[]) {
+  if (!(import.meta as any).env?.DEV) return
+  console.debug('[CameraScanner]', ...args)
+}
+
 const videoEl = ref<HTMLVideoElement | null>(null)
 const availableDevices = ref<MediaDeviceInfo[]>([])
 const selectedDeviceId = ref<string | null>(null)
@@ -112,6 +117,7 @@ let barcodeDetector: BarcodeDetectorInstance | null = null
 let stream: MediaStream | null = null
 
 async function ensureCameraAccess() {
+  debugLog('ensureCameraAccess', { supportsCamera, permissionsRequested })
   if (!supportsCamera) {
     emit('error', statusMessage.value)
     return false
@@ -132,8 +138,10 @@ async function ensureCameraAccess() {
 
 async function loadDevices() {
   try {
+    debugLog('loadDevices:start')
     const devices = await BrowserMultiFormatReader.listVideoInputDevices()
     availableDevices.value = devices
+    debugLog('loadDevices:devices', devices.map(d => ({ id: d.deviceId, label: d.label })))
     if (!devices.length) {
       statusMessage.value = 'No camera devices found.'
       return
@@ -226,18 +234,24 @@ async function playVideo(video: HTMLVideoElement) {
 function bindStreamToVideo(srcStream: MediaStream) {
   if (!videoEl.value) return
   try {
+    debugLog('bindStreamToVideo', { trackCount: srcStream.getVideoTracks().length })
     videoEl.value.srcObject = srcStream
     hasStream.value = true
-    videoEl.value.onplaying = () => {
+    const video = videoEl.value
+    const handlePlaying = () => {
       streamReady.value = true
       statusMessage.value = 'Align the code inside the frame.'
     }
+    const handleLoaded = () => {
+      video.removeEventListener('loadedmetadata', handleLoaded)
+      void playVideo(video)
+    }
+    video.addEventListener('playing', handlePlaying)
+    video.addEventListener('loadedmetadata', handleLoaded)
     if (videoEl.value.readyState >= 2) {
       playVideo(videoEl.value)
     } else {
-      videoEl.value.onloadedmetadata = () => {
-        videoEl.value && playVideo(videoEl.value)
-      }
+      // `playVideo` will be triggered by the 'loadedmetadata' listener
     }
   } catch (error: any) {
     statusMessage.value = error?.message || 'Failed to attach camera stream.'
@@ -247,6 +261,7 @@ function bindStreamToVideo(srcStream: MediaStream) {
 
 async function startWithBarcodeDetector(constraints: MediaStreamConstraints) {
   try {
+    debugLog('startWithBarcodeDetector', constraints)
     stream = await navigator.mediaDevices.getUserMedia(constraints)
     bindStreamToVideo(stream)
     if (!barcodeDetector) {
@@ -277,81 +292,43 @@ async function startWithZxing(constraints: MediaStreamConstraints) {
     const video = videoEl.value!
     streamReady.value = false
     statusMessage.value = 'Starting scanner...'
+    debugLog('startWithZxing:init', { constraints, selectedDeviceId: selectedDeviceId.value })
 
-    let metadataHandled = false
-    const ensurePlaying = () => {
-      if (metadataHandled) return
-      metadataHandled = true
-      void playVideo(video)
+    // Acquire fresh stream for preview and decoding
+    if (stream) {
+      try {
+        stream.getTracks().forEach(track => track.stop())
+      } catch {}
+      stream = null
     }
 
-    video.onloadedmetadata = ensurePlaying
-    video.onplaying = () => {
-      streamReady.value = true
-      statusMessage.value = 'Align the code inside the frame.'
+    const mediaConstraints: MediaStreamConstraints = {
+      video: selectedDeviceId.value
+        ? { deviceId: { exact: selectedDeviceId.value } }
+        : constraints.video || { facingMode: 'environment' },
     }
+
+    const mediaStream = await navigator.mediaDevices.getUserMedia(mediaConstraints)
+    debugLog('startWithZxing:stream acquired', { trackLabel: mediaStream.getVideoTracks()[0]?.label })
+    stream = mediaStream
+    bindStreamToVideo(mediaStream)
 
     const assignControls = (ctrl?: IScannerControls | null) => {
       if (ctrl) controls = ctrl
     }
 
-    const deviceId = selectedDeviceId.value || undefined
-
-    const startWithDevice = async () => {
-      const ctrl = await reader!.decodeFromVideoDevice(deviceId, video, (result, error, innerCtrl) => {
-        assignControls(innerCtrl)
-        if (!metadataHandled && video.readyState >= 2) {
-          ensurePlaying()
-        }
-        if (result) {
-          handleDetectedValue(result.getText())
-          innerCtrl?.stop()
-        } else if (error && error.name !== 'NotFoundException') {
-          statusMessage.value = error.message || 'Unable to read code. Please try again.'
-        }
-      })
-      assignControls(ctrl)
-    }
-
-    try {
-      await startWithDevice()
-    } catch (deviceErr) {
-      if (import.meta.env.DEV) {
-        console.debug('[CameraScanner] decodeFromVideoDevice failed', deviceErr)
+    const ctrl = await reader.decodeFromStream(mediaStream, video, (result, error, innerCtrl) => {
+      assignControls(innerCtrl)
+      if (result) {
+        handleDetectedValue(result.getText())
+        innerCtrl?.stop()
+      } else if (error && error.name !== 'NotFoundException') {
+        statusMessage.value = error.message || 'Unable to read code. Please try again.'
       }
-      const mediaStream = await navigator.mediaDevices.getUserMedia(constraints)
-      bindStreamToVideo(mediaStream)
-      stream = mediaStream
-      const ctrl = await reader.decodeFromStream(mediaStream, video, (result, error, innerCtrl) => {
-        assignControls(innerCtrl)
-        if (!metadataHandled && video.readyState >= 2) {
-          ensurePlaying()
-        }
-        if (result) {
-          handleDetectedValue(result.getText())
-          innerCtrl?.stop()
-        } else if (error && error.name !== 'NotFoundException') {
-          statusMessage.value = error.message || 'Unable to read code. Please try again.'
-        }
-      })
-      assignControls(ctrl)
-    }
+    })
 
-    if (!stream) {
-      stream = (video.srcObject as MediaStream) || null
-    }
-    hasStream.value = !!stream
-
-    if (!stream) {
-      statusMessage.value = 'Camera stream unavailable.'
-      emit('error', statusMessage.value)
-    }
-
-    if (video.readyState >= 2) {
-      ensurePlaying()
-    } else if (import.meta.env.DEV) {
-      console.debug('[CameraScanner] waiting for video.readyState >= 2, current:', video.readyState)
-    }
+    assignControls(ctrl)
+    hasStream.value = true
   } catch (error: any) {
     if (error?.name === 'NotAllowedError') {
       permissionDenied.value = true
@@ -369,6 +346,7 @@ async function start() {
     statusMessage.value = supportsCamera ? 'Camera element unavailable.' : statusMessage.value
     return
   }
+  debugLog('start invoked', { hasBarcodeDetector })
   initializing.value = true
   permissionDenied.value = false
   statusMessage.value = 'Requesting camera...'
@@ -404,6 +382,7 @@ async function handleCancel() {
 watch(
   () => props.open,
   async open => {
+    debugLog('watch open', open)
     if (open) {
       const ready = await ensureCameraAccess()
       if (!ready) return
@@ -420,6 +399,7 @@ watch(
 )
 
 watch(selectedDeviceId, async (id, prev) => {
+  debugLog('watch selectedDeviceId', { id, prev, open: props.open })
   if (!props.open) return
   if (ignoreDeviceChange) return
   if (!id || id === prev) return
