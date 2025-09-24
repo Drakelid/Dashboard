@@ -28,7 +28,7 @@
             <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
               <div class="h-48 w-48 border-2 border-white/70 rounded-lg"></div>
             </div>
-            <div v-if="!readyToShow" class="absolute inset-0 grid place-items-center bg-black/70 px-4 text-center text-white text-sm">
+            <div v-if="!streamReady" class="absolute inset-0 grid place-items-center bg-black/70 px-4 text-center text-white text-sm">
               {{ statusMessage }}
             </div>
           </section>
@@ -75,7 +75,7 @@
 
 <script setup lang="ts">
 import { BrowserMultiFormatReader, type IScannerControls } from '@zxing/browser'
-import { onBeforeUnmount, ref, watch, computed } from 'vue'
+import { onBeforeUnmount, ref, watch } from 'vue'
 
 const props = defineProps<{ open: boolean }>()
 const emit = defineEmits<{ (e: 'close'): void; (e: 'decoded', payload: string): void; (e: 'error', payload: string): void }>()
@@ -95,7 +95,8 @@ const statusMessage = ref(
 )
 const initializing = ref(false)
 const permissionDenied = ref(false)
-const readyToShow = computed(() => supportsCamera && !initializing.value && !permissionDenied.value && hasStream.value)
+const hasStream = ref(false)
+const streamReady = ref(false)
 
 let controls: IScannerControls | null = null
 let reader: BrowserMultiFormatReader | null = null
@@ -104,7 +105,6 @@ let ignoreDeviceChange = false
 let permissionsRequested = false
 let detectionFrame = 0
 let barcodeDetector: BarcodeDetector | null = null
-const hasStream = ref(false)
 let stream: MediaStream | null = null
 
 async function ensureCameraAccess() {
@@ -156,12 +156,15 @@ async function stop() {
   stopBarcodeLoop()
   controls?.stop()
   controls = null
-  reader?.reset()
+  if (reader) {
+    try { reader.reset() } catch {}
+  }
   if (stream) {
     stream.getTracks().forEach(track => track.stop())
     stream = null
-    hasStream.value = false
   }
+  hasStream.value = false
+  streamReady.value = false
   if (videoEl.value) {
     try { videoEl.value.pause() } catch {}
     videoEl.value.srcObject = null
@@ -194,22 +197,48 @@ async function runBarcodeLoop() {
   detectionFrame = requestAnimationFrame(runBarcodeLoop)
 }
 
+async function playVideo(video: HTMLVideoElement) {
+  try {
+    await video.play()
+    streamReady.value = true
+    statusMessage.value = 'Align the code inside the frame.'
+  } catch (error: any) {
+    streamReady.value = false
+    statusMessage.value = error?.message || 'Unable to start video playback.'
+    emit('error', statusMessage.value)
+  }
+}
+
+function bindStreamToVideo(srcStream: MediaStream) {
+  if (!videoEl.value) return
+  try {
+    videoEl.value.srcObject = srcStream
+    hasStream.value = true
+    if (videoEl.value.readyState >= 2) {
+      playVideo(videoEl.value)
+    } else {
+      videoEl.value.onloadedmetadata = () => {
+        videoEl.value && playVideo(videoEl.value)
+      }
+    }
+  } catch (error: any) {
+    statusMessage.value = error?.message || 'Failed to attach camera stream.'
+    emit('error', statusMessage.value)
+  }
+}
+
 async function startWithBarcodeDetector(constraints: MediaStreamConstraints) {
   try {
     stream = await navigator.mediaDevices.getUserMedia(constraints)
-    if (!videoEl.value) return
-    videoEl.value.srcObject = stream
-    await videoEl.value.play().catch(() => {})
-    hasStream.value = true
+    bindStreamToVideo(stream)
     if (!barcodeDetector) {
       try {
-        const supported = await (window as any).BarcodeDetector.getSupportedFormats?.()
-        barcodeDetector = new (window as any).BarcodeDetector({ formats: supported || undefined })
+        const formats = await (window as any).BarcodeDetector.getSupportedFormats?.()
+        barcodeDetector = new (window as any).BarcodeDetector({ formats: formats || undefined })
       } catch {
         barcodeDetector = new (window as any).BarcodeDetector()
       }
     }
-    statusMessage.value = 'Align the code inside the frame.'
     stopBarcodeLoop()
     detectionFrame = requestAnimationFrame(runBarcodeLoop)
   } catch (error: any) {
@@ -227,20 +256,15 @@ async function startWithBarcodeDetector(constraints: MediaStreamConstraints) {
 async function startWithZxing(constraints: MediaStreamConstraints) {
   if (!reader) reader = new BrowserMultiFormatReader()
   try {
-    controls = await reader.decodeFromConstraints(constraints, videoEl.value!, (result, error) => {
+    stream = await navigator.mediaDevices.getUserMedia(constraints)
+    bindStreamToVideo(stream)
+    reader.decodeFromVideoElementContinuously(videoEl.value!, (result, error) => {
       if (result) {
         handleDetectedValue(result.getText())
       } else if (error && error.name !== 'NotFoundException') {
         statusMessage.value = error.message || 'Unable to read code. Please try again.'
       }
     })
-    if (controls?.stream && videoEl.value) {
-      stream = controls.stream
-      videoEl.value.srcObject = stream
-      await videoEl.value.play().catch(() => {})
-      hasStream.value = true
-    }
-    statusMessage.value = 'Align the code inside the frame.'
   } catch (error: any) {
     if (error?.name === 'NotAllowedError') {
       permissionDenied.value = true
@@ -254,7 +278,10 @@ async function startWithZxing(constraints: MediaStreamConstraints) {
 }
 
 async function start() {
-  if (!supportsCamera || !videoEl.value) return
+  if (!supportsCamera || !videoEl.value) {
+    statusMessage.value = supportsCamera ? 'Camera element unavailable.' : statusMessage.value
+    return
+  }
   initializing.value = true
   permissionDenied.value = false
   statusMessage.value = 'Requesting camera...'
