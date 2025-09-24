@@ -408,6 +408,14 @@ watch(selectedDeviceId, async (id, prev) => {
   await restart()
 })
 
+watch(streamReady, value => {
+  debugLog('streamReady changed', value)
+})
+
+watch(statusMessage, value => {
+  debugLog('statusMessage changed', value)
+})
+
 onBeforeUnmount(async () => {
   await stop()
 })
