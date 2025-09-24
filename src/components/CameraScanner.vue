@@ -75,7 +75,7 @@
 
 <script setup lang="ts">
 import { BrowserMultiFormatReader, type IScannerControls } from '@zxing/browser'
-import { onBeforeUnmount, ref, watch } from 'vue'
+import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
 
 const props = defineProps<{ open: boolean }>()
 const emit = defineEmits<{ (e: 'close'): void; (e: 'decoded', payload: string): void; (e: 'error', payload: string): void }>()
@@ -86,7 +86,8 @@ const supportsCamera = typeof navigator !== 'undefined' && !!navigator.mediaDevi
 const hasBarcodeDetector = typeof window !== 'undefined' && 'BarcodeDetector' in window
 
 function debugLog(...args: any[]) {
-  if (!(import.meta as any).env?.DEV) return
+  const isDev = Boolean((import.meta as any).env && (import.meta as any).env.DEV)
+  if (!isDev) return
   console.debug('[CameraScanner]', ...args)
 }
 
@@ -241,6 +242,7 @@ function bindStreamToVideo(srcStream: MediaStream) {
     const handlePlaying = () => {
       streamReady.value = true
       statusMessage.value = 'Align the code inside the frame.'
+      video.removeEventListener('playing', handlePlaying)
     }
     const handleLoaded = () => {
       video.removeEventListener('loadedmetadata', handleLoaded)
@@ -342,6 +344,7 @@ async function startWithZxing(constraints: MediaStreamConstraints) {
 }
 
 async function start() {
+  await nextTick()
   if (!supportsCamera || !videoEl.value) {
     statusMessage.value = supportsCamera ? 'Camera element unavailable.' : statusMessage.value
     return
