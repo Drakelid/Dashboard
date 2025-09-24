@@ -86,9 +86,7 @@ const supportsCamera = typeof navigator !== 'undefined' && !!navigator.mediaDevi
 const hasBarcodeDetector = typeof window !== 'undefined' && 'BarcodeDetector' in window
 
 function debugLog(...args: any[]) {
-  const isDev = Boolean((import.meta as any).env && (import.meta as any).env.DEV)
-  if (!isDev) return
-  console.debug('[CameraScanner]', ...args)
+  console.info('[CameraScanner]', ...args)
 }
 
 const videoEl = ref<HTMLVideoElement | null>(null)
@@ -238,10 +236,10 @@ function bindStreamToVideo(srcStream: MediaStream) {
     debugLog('bindStreamToVideo', { trackCount: srcStream.getVideoTracks().length })
     videoEl.value.srcObject = srcStream
     hasStream.value = true
+    streamReady.value = true
+    statusMessage.value = 'Align the code inside the frame.'
     const video = videoEl.value
     const handlePlaying = () => {
-      streamReady.value = true
-      statusMessage.value = 'Align the code inside the frame.'
       video.removeEventListener('playing', handlePlaying)
     }
     const handleLoaded = () => {
