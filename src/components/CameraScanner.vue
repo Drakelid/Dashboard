@@ -170,6 +170,8 @@ async function stop() {
   if (videoEl.value) {
     try { videoEl.value.pause() } catch {}
     videoEl.value.srcObject = null
+    videoEl.value.onloadedmetadata = null
+    videoEl.value.onplaying = null
   }
 }
 
@@ -258,47 +260,43 @@ async function startWithBarcodeDetector(constraints: MediaStreamConstraints) {
 async function startWithZxing(constraints: MediaStreamConstraints) {
   if (!reader) reader = new BrowserMultiFormatReader()
   try {
-    const deviceId = (() => {
-      const video = constraints.video
-      if (video && typeof video === 'object' && 'deviceId' in video && video.deviceId) {
-        const specifier = video.deviceId as MediaTrackConstraintSet['deviceId']
-        if (typeof specifier === 'string') return specifier
-        if (specifier && typeof specifier === 'object' && 'exact' in specifier) {
-          return specifier.exact as string
-        }
-      }
-      return undefined
-    })()
-
     const video = videoEl.value!
     streamReady.value = false
     statusMessage.value = 'Starting scanner...'
+
+    let metadataHandled = false
+    const ensurePlaying = () => {
+      if (metadataHandled) return
+      metadataHandled = true
+      void playVideo(video)
+    }
+
+    video.onloadedmetadata = ensurePlaying
 
     const assignControls = (ctrl?: IScannerControls | null) => {
       if (ctrl) controls = ctrl
     }
 
-    controls = await reader.decodeFromVideoDevice(deviceId, video, (result, error, ctrl) => {
-      assignControls(ctrl)
+    const ctrl = await reader.decodeFromConstraints(constraints, video, (result, error, innerCtrl) => {
+      assignControls(innerCtrl)
+      if (!metadataHandled && video.readyState >= 2) {
+        ensurePlaying()
+      }
       if (result) {
         handleDetectedValue(result.getText())
-        ctrl?.stop()
+        innerCtrl?.stop()
       } else if (error && error.name !== 'NotFoundException') {
         statusMessage.value = error.message || 'Unable to read code. Please try again.'
       }
     })
 
+    assignControls(ctrl)
+
     stream = (video.srcObject as MediaStream) || null
     hasStream.value = !!stream
 
     if (video.readyState >= 2) {
-      await playVideo(video)
-    } else {
-      video.onloadedmetadata = () => {
-        if (video) {
-          playVideo(video)
-        }
-      }
+      ensurePlaying()
     }
   } catch (error: any) {
     if (error?.name === 'NotAllowedError') {
