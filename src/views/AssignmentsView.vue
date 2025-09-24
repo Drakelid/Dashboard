@@ -690,6 +690,64 @@ function resolveCoordinates(id: string, entry: DriverDeliveryItem, index: number
   return fallbackCoordinate(index)
 }
 
+function resolveDriverCoordinates(entry: DriverDeliveryItem) {
+  const e: any = entry
+  const candidates = [
+    { lat: e.driver_latitude, lng: e.driver_longitude },
+    { lat: e.current_latitude, lng: e.current_longitude },
+    { lat: e.vehicle_latitude, lng: e.vehicle_longitude },
+  ]
+  return selectCoordinate(candidates) ?? fallbackCoordinate(0)
+}
+
+function resolvePickupCoordinates(entry: DriverDeliveryItem) {
+  const e: any = entry
+  const d: any = entry.delivery || {}
+  const candidates = [
+    { lat: e.pickup_latitude, lng: e.pickup_longitude },
+    { lat: d.pickup_latitude, lng: d.pickup_longitude },
+    { lat: e.latitude, lng: e.longitude },
+  ]
+  return selectCoordinate(candidates) ?? fallbackCoordinate(0)
+}
+
+function resolveDropoffCoordinates(entry: DriverDeliveryItem) {
+  const e: any = entry
+  const d: any = entry.delivery || {}
+  const candidates = [
+    { lat: e.delivery_latitude, lng: e.delivery_longitude },
+    { lat: d.delivery_latitude, lng: d.delivery_longitude },
+    { lat: e.latitude, lng: e.longitude },
+  ]
+  return selectCoordinate(candidates) ?? fallbackCoordinate(0)
+}
+
+function selectCoordinate(candidates: Array<{ lat?: any; lng?: any }>) {
+  for (const candidate of candidates) {
+    const lat = toNumber(candidate.lat)
+    const lng = toNumber(candidate.lng)
+    if (lat != null && lng != null) return { lat, lng }
+  }
+  return null
+}
+
+function distanceBetween(
+  a: { lat: number; lng: number } | null,
+  b: { lat: number; lng: number } | null
+) {
+  if (!a || !b) return null
+  const lat1 = a.lat * (Math.PI / 180)
+  const lat2 = b.lat * (Math.PI / 180)
+  const dLat = (b.lat - a.lat) * (Math.PI / 180)
+  const dLng = (b.lng - a.lng) * (Math.PI / 180)
+  const sinLat = Math.sin(dLat / 2)
+  const sinLng = Math.sin(dLng / 2)
+  const h = sinLat * sinLat + Math.cos(lat1) * Math.cos(lat2) * sinLng * sinLng
+  const c = 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h))
+  const earthRadiusKm = 6371
+  return earthRadiusKm * c
+}
+
 function extractCoordinates(entry: DriverDeliveryItem) {
   const candidates: Array<{ lat?: any; lng?: any }> = []
   const e: any = entry
