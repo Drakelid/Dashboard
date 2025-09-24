@@ -1,4 +1,3 @@
-<template>
   <section class="space-y-6">
     <header class="px-4 md:px-6">
       <div class="rounded-xl border bg-white shadow-sm px-4 py-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -136,7 +135,8 @@
                     <div class="text-xs text-gray-500">to {{ assignment.dropoffLabel }}</div>
                     <div class="mt-1 flex items-center gap-3 text-xs text-gray-500">
                       <span class="inline-flex items-center gap-1"><Clock class="w-3 h-3" /> {{ assignment.timeLabel }}</span>
-                      <span>{{ assignment.distanceLabel }}</span>
+                      <span>Pickup {{ assignment.pickupDistanceLabel }}</span>
+                      <span>Dropoff {{ assignment.dropoffDistanceLabel }}</span>
                       <span class="font-medium text-green-700">{{ assignment.earningsLabel }}</span>
                     </div>
                   </div>
@@ -573,6 +573,15 @@ function enrichAssignment(entry: DriverDeliveryItem, index: number): AssignmentE
   const earningsValue = deriveEarnings(entry)
   const pickupWindow = formatPickupWindow(entry)
   const coordinates = resolveCoordinates(id, entry, index)
+  const driverCoords = resolveDriverCoordinates(entry)
+  const pickupCoords = resolvePickupCoordinates(entry)
+  const dropoffCoords = resolveDropoffCoordinates(entry)
+
+  const pickupDistanceKm = distanceBetween(driverCoords, pickupCoords) ?? distanceBetween(pickupCoords, dropoffCoords)
+  const dropoffDistanceKm = distanceBetween(driverCoords, dropoffCoords) ?? distanceBetween(pickupCoords, dropoffCoords)
+
+  const pickupDistanceLabel = pickupDistanceKm != null ? formatDistanceKm(pickupDistanceKm) : formatDistance(entry)
+  const dropoffDistanceLabel = dropoffDistanceKm != null ? formatDistanceKm(dropoffDistanceKm) : formatDistance(entry)
   const tasks = createMicroTasks(id, status)
   const timeline = createTimelineEntries(id, entry, status)
   const localPicked = !!pickedUpState[id]
@@ -592,7 +601,9 @@ function enrichAssignment(entry: DriverDeliveryItem, index: number): AssignmentE
     earningsValue,
     earningsLabel: earningsValue ? formatCurrency(earningsValue) : 'kr 0',
     timeLabel: formatTime(entry) || 'Time TBD',
-    distanceLabel: formatDistance(entry) || 'Distance TBD',
+    distanceLabel: (effectiveStatus === 'ready' ? pickupDistanceLabel : dropoffDistanceLabel) || pickupDistanceLabel || dropoffDistanceLabel || 'Distance TBD',
+    pickupDistanceLabel: pickupDistanceLabel || 'Distance TBD',
+    dropoffDistanceLabel: dropoffDistanceLabel || 'Distance TBD',
     pickupWindow,
     contactName: entry.delivery?.receiver?.name || entry.actor?.name || 'Recipient',
     contactPhone: entry.delivery?.receiver?.phone || entry.actor?.phone || 'N/A',
@@ -641,6 +652,12 @@ function formatDistance(entry: DriverDeliveryItem) {
   const num = typeof distance === 'number' ? distance : parseFloat(String(distance))
   if (!Number.isFinite(num)) return null
   return `${num.toFixed(1)} km`
+}
+
+function formatDistanceKm(km: number) {
+  if (!Number.isFinite(km)) return null
+  const precision = km >= 10 ? 0 : 1
+  return `${km.toFixed(precision)} km`
 }
 
 function formatPickupWindow(entry: DriverDeliveryItem) {
@@ -910,6 +927,8 @@ interface AssignmentExtended {
   earningsLabel: string
   timeLabel: string
   distanceLabel: string
+  pickupDistanceLabel: string
+  dropoffDistanceLabel: string
   pickupWindow: string
   contactName: string
   contactPhone: string
