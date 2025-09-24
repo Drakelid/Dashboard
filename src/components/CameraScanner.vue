@@ -203,10 +203,20 @@ async function runBarcodeLoop() {
 
 async function playVideo(video: HTMLVideoElement) {
   try {
+    if (!video.paused && !video.ended) {
+      streamReady.value = true
+      statusMessage.value = 'Align the code inside the frame.'
+      return
+    }
     await video.play()
     streamReady.value = true
     statusMessage.value = 'Align the code inside the frame.'
   } catch (error: any) {
+    if (!video.paused && !video.ended) {
+      streamReady.value = true
+      statusMessage.value = 'Align the code inside the frame.'
+      return
+    }
     streamReady.value = false
     statusMessage.value = error?.message || 'Unable to start video playback.'
     emit('error', statusMessage.value)
@@ -218,6 +228,10 @@ function bindStreamToVideo(srcStream: MediaStream) {
   try {
     videoEl.value.srcObject = srcStream
     hasStream.value = true
+    videoEl.value.onplaying = () => {
+      streamReady.value = true
+      statusMessage.value = 'Align the code inside the frame.'
+    }
     if (videoEl.value.readyState >= 2) {
       playVideo(videoEl.value)
     } else {
@@ -264,6 +278,16 @@ async function startWithZxing(constraints: MediaStreamConstraints) {
     streamReady.value = false
     statusMessage.value = 'Starting scanner...'
 
+    if (!hasStream.value) {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints)
+        bindStreamToVideo(stream)
+      } catch (mediaError: any) {
+        statusMessage.value = mediaError?.message || 'Failed to access camera stream.'
+        emit('error', statusMessage.value)
+      }
+    }
+
     let metadataHandled = false
     const ensurePlaying = () => {
       if (metadataHandled) return
@@ -272,6 +296,10 @@ async function startWithZxing(constraints: MediaStreamConstraints) {
     }
 
     video.onloadedmetadata = ensurePlaying
+    video.onplaying = () => {
+      streamReady.value = true
+      statusMessage.value = 'Align the code inside the frame.'
+    }
 
     const assignControls = (ctrl?: IScannerControls | null) => {
       if (ctrl) controls = ctrl

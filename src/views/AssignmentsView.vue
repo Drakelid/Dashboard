@@ -24,9 +24,9 @@
             </span>
           </div>
         </div>
-        <div class="flex flex-wrap items-center gap-2">
+        <div class="w-full flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2 lg:w-auto">
           <button
-            class="h-9 px-3 rounded-lg border text-sm inline-flex items-center gap-2 transition"
+            class="h-9 px-3 rounded-lg border text-sm inline-flex items-center gap-2 transition w-full sm:w-auto justify-center"
             :class="autoAssignEnabled ? 'border-green-200 bg-green-50 text-green-700 hover:bg-green-100' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'"
             @click="toggleAutoAssign"
           >
@@ -34,14 +34,14 @@
             <span>{{ autoAssignEnabled ? 'Auto assign on' : 'Auto assign off' }}</span>
           </button>
           <button
-            class="h-9 px-3 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-sm inline-flex items-center gap-2 text-red-700"
+            class="h-9 px-3 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-sm inline-flex items-center gap-2 text-red-700 w-full sm:w-auto justify-center"
             @click="handleSOS"
           >
             <ShieldAlert class="w-4 h-4" />
             <span>SOS / Support</span>
           </button>
           <button
-            class="h-9 px-3 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-sm inline-flex items-center gap-2 text-blue-700"
+            class="h-9 px-3 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-sm inline-flex items-center gap-2 text-blue-700 w-full sm:w-auto justify-center"
             @click="handleScan"
           >
             <Scan class="w-4 h-4" />
@@ -65,7 +65,7 @@
 
     <!-- Performance Strip -->
     <section class="px-4 md:px-6">
-      <div class="grid gap-3 md:grid-cols-4">
+      <div class="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
         <div v-for="metric in performanceMetrics" :key="metric.label" class="rounded-xl border bg-white px-4 py-3 shadow-sm">
           <div class="text-xs uppercase tracking-wide text-gray-500">{{ metric.label }}</div>
           <div class="mt-1 flex items-baseline gap-2">
@@ -82,7 +82,7 @@
     <!-- Route Overview Bar -->
     <section class="px-4 md:px-6">
       <div class="rounded-xl border bg-white shadow-sm px-4 py-3 overflow-x-auto">
-        <div class="flex items-center gap-3 min-w-max">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3 sm:min-w-max">
           <button
             v-for="stop in routeStops"
             :key="stop.id"
@@ -157,16 +157,16 @@
                   </div>
                 </div>
 
-                <div class="flex items-center gap-2">
+                <div class="flex flex-wrap items-center gap-2">
                   <button
-                    class="h-8 px-3 text-xs rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-1"
+                    class="h-8 px-3 text-xs rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-1 w-full sm:w-auto justify-center"
                     @click.stop="callContact(assignment)"
                   >
                     <Phone class="w-3.5 h-3.5" />
                     Call
                   </button>
                   <button
-                    class="h-8 px-3 text-xs rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-1"
+                    class="h-8 px-3 text-xs rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-1 w-full sm:w-auto justify-center"
                     @click.stop="messageContact(assignment)"
                   >
                     <MessageSquare class="w-3.5 h-3.5" />
@@ -174,14 +174,14 @@
                   </button>
                   <button
                     v-if="assignment.status !== 'in_transit' && !assignment.localPicked"
-                    class="h-8 px-3 text-xs rounded-lg bg-green-600 text-white hover:bg-green-700 inline-flex items-center gap-1"
+                    class="h-8 px-3 text-xs rounded-lg bg-green-600 text-white hover:bg-green-700 inline-flex items-center gap-1 w-full sm:w-auto justify-center"
                     @click.stop="markPickedUp(assignment)"
                   >
                     <PackageIcon class="w-3.5 h-3.5" />
                     Picked up
                   </button>
                   <button
-                    class="h-8 px-3 text-xs rounded-lg bg-blue-600 text-white hover:bg-blue-700 inline-flex items-center gap-1"
+                    class="h-8 px-3 text-xs rounded-lg bg-blue-600 text-white hover:bg-blue-700 inline-flex items-center gap-1 w-full sm:w-auto justify-center"
                     @click.stop="navigateTo(assignment)"
                   >
                     <Navigation class="w-3.5 h-3.5" />
@@ -415,7 +415,7 @@ const mapMarkers = computed(() =>
     lat: assignment.coordinates.lat,
     lng: assignment.coordinates.lng,
     label: `${assignment.dropoffLabel}\n${assignment.timeLabel}`,
-    kind: assignment.status === 'needs_action' ? 'nearby' : 'job',
+    kind: assignment.status === 'needs_action' ? 'nearby' as const : 'job' as const,
     color: assignment.status === 'needs_action' ? '#f97316' : assignment.status === 'in_transit' ? '#2563eb' : '#16a34a',
   }))
 )
@@ -917,6 +917,7 @@ interface AssignmentExtended {
   tasks: DrawerTaskInternal[]
   timeline: TimelineEvent[]
   completed: boolean
+  localPicked: boolean
 }
 
 type AssignmentStatus = 'ready' | 'in_transit' | 'needs_action'
