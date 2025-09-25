@@ -197,6 +197,14 @@
                       Picked up
                     </button>
                     <button
+                      v-if="assignment.status === 'in_transit' && !assignment.localDelivered"
+                      class="h-8 px-3 text-xs rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 inline-flex items-center gap-1 w-full sm:w-auto justify-center"
+                      @click.stop="markDelivered(assignment)"
+                    >
+                      <CheckCircle class="w-3.5 h-3.5" />
+                      Delivered
+                    </button>
+                    <button
                       class="h-8 px-3 text-xs rounded-lg bg-blue-600 text-white hover:bg-blue-700 inline-flex items-center gap-1 w-full sm:w-auto justify-center"
                       @click.stop="navigateTo(assignment)"
                     >
@@ -342,6 +350,7 @@ const selectedAssignmentId = ref<string | null>(normalizeFocus(route.query.focus
 const packageModalOpen = ref(false)
 const scannerOpen = ref(false)
 const pickedUpState = reactive<Record<string, boolean>>({})
+const deliveredState = reactive<Record<string, boolean>>({})
 const assignmentCoords = reactive<Record<string, { lat: number; lng: number }>>({})
 const pendingGeocodes = new Set<string>()
 
@@ -556,6 +565,11 @@ function markPickedUp(assignment: AssignmentExtended) {
   toast.success(`Marked assignment #${assignment.id} as picked up`)
 }
 
+function markDelivered(assignment: AssignmentExtended) {
+  deliveredState[assignment.id] = true
+  toast.success(`Great job! Assignment #${assignment.id} marked as delivered`)
+}
+
 function navigateTo(assignment: AssignmentExtended) {
   toast.info(`Starting navigation to ${assignment.dropoffLabel}`)
 }
@@ -597,6 +611,7 @@ function enrichAssignment(entry: DriverDeliveryItem, index: number): AssignmentE
   const tasks = createMicroTasks(id, status)
   const timeline = createTimelineEntries(id, entry, status)
   const localPicked = !!pickedUpState[id]
+  const localDelivered = !!deliveredState[id]
   const effectiveStatus = localPicked && status === 'ready' ? 'in_transit' : status
 
   return {
@@ -613,17 +628,18 @@ function enrichAssignment(entry: DriverDeliveryItem, index: number): AssignmentE
     earningsValue,
     earningsLabel: earningsValue ? formatCurrency(earningsValue) : 'kr 0',
     timeLabel: formatTime(entry) || 'Time TBD',
-    distanceLabel: (effectiveStatus === 'ready' ? pickupDistanceLabel : dropoffDistanceLabel) || pickupDistanceLabel || dropoffDistanceLabel || 'Distance TBD',
+    distanceLabel: localDelivered ? 'Delivered' : (effectiveStatus === 'ready' ? pickupDistanceLabel : dropoffDistanceLabel) || pickupDistanceLabel || dropoffDistanceLabel || 'Distance TBD',
     pickupDistanceLabel: pickupDistanceLabel || 'Distance TBD',
-    dropoffDistanceLabel: dropoffDistanceLabel || 'Distance TBD',
+    dropoffDistanceLabel: localDelivered ? 'Delivered' : dropoffDistanceLabel || 'Distance TBD',
     pickupWindow,
     contactName: entry.delivery?.receiver?.name || entry.actor?.name || 'Recipient',
     contactPhone: entry.delivery?.receiver?.phone || entry.actor?.phone || 'N/A',
     coordinates,
     tasks,
     timeline,
-    completed: packages.every(pkg => (pkg.delivery_status || '').toLowerCase().includes('delivered')),
+    completed: localDelivered || packages.every(pkg => (pkg.delivery_status || '').toLowerCase().includes('delivered')),
     localPicked,
+    localDelivered,
   }
 }
 
