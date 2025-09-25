@@ -199,11 +199,11 @@
                     </button>
                     <button
                       v-if="!assignment.localDelivered"
-                      class="h-8 px-3 text-xs rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 inline-flex items-center gap-1 w-full sm:w-auto justify-center disabled:opacity-60 disabled:cursor-not-allowed"
+                      class="h-8 px-3 text-xs rounded-lg border border-emerald-500 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 inline-flex items-center gap-1 w-full sm:w-auto justify-center disabled:opacity-60 disabled:cursor-not-allowed"
                       :disabled="deliveryInFlight[assignment.id]"
                       @click.stop="markDelivered(assignment)"
                     >
-                      <CheckCircle class="w-3.5 h-3.5" />
+                      <CheckCircle class="w-3.5 h-3.5 text-emerald-600" />
                       {{ deliveryInFlight[assignment.id] ? 'Submitting…' : 'Delivered' }}
                     </button>
                     <button
