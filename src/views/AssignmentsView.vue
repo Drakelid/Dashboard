@@ -56,7 +56,7 @@
         <div>
           <div class="font-semibold">Assignments are unavailable</div>
           <p class="mt-0.5">
-            {{ loadError }}. Showing sample assignments so you can preview the workflow.
+            {{ loadError }}
           </p>
         </div>
         <button class="ml-auto text-xs text-amber-700 underline" @click="refresh">Retry</button>
@@ -76,13 +76,19 @@
           </div>
           <p class="text-xs text-gray-500 mt-1">{{ metric.caption }}</p>
         </div>
-      </div>
     </section>
 
     <!-- Route Overview Bar -->
     <section class="px-4 md:px-6">
       <div class="rounded-xl border bg-white shadow-sm px-4 py-3 overflow-x-auto">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3 sm:min-w-max">
+        <div v-if="showInitialLoading" class="flex items-center gap-3 text-sm text-gray-500">
+          <Spinner size="sm" />
+          Loading assignments…
+        </div>
+        <div v-else-if="!routeStops.length" class="text-sm text-gray-500">
+          No assignments to display.
+        </div>
+        <div v-else class="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3 sm:min-w-max">
           <button
             v-for="stop in routeStops"
             :key="stop.id"
@@ -110,88 +116,97 @@
       <div class="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
         <!-- Assignment Groups -->
         <div class="space-y-4">
-          <div v-for="group in assignmentGroups" :key="group.id" class="rounded-xl border bg-white shadow-sm">
-            <header class="px-4 py-3 border-b flex items-center justify-between">
-              <div class="flex items-center gap-2">
-                <span class="h-2.5 w-2.5 rounded-full" :class="group.dot"></span>
-                <h2 class="text-sm font-semibold text-gray-800">{{ group.label }}</h2>
-                <span class="text-xs text-gray-500">({{ group.items.length }})</span>
-              </div>
-            </header>
-            <div v-if="!group.items.length" class="px-4 py-6 text-sm text-gray-500">Nothing here right now.</div>
-            <div v-else class="divide-y">
-              <article
-                v-for="assignment in group.items"
-                :key="assignment.id"
-                class="px-4 py-4 space-y-3 cursor-pointer hover:bg-blue-50/40"
-                :class="selectedAssignmentId === assignment.id ? 'bg-blue-50/60' : ''"
-                @click="selectAssignment(assignment.id)"
-              >
-                <div class="flex items-start justify-between gap-3">
-                  <div>
-                    <div class="flex items-center gap-2 text-sm font-semibold text-gray-900">
-                      <Truck class="w-4 h-4" />
-                      {{ assignment.pickupLabel }}
-                    </div>
-                    <div class="text-xs text-gray-500">to {{ assignment.dropoffLabel }}</div>
-                    <div class="mt-1 flex items-center gap-3 text-xs text-gray-500">
-                      <span class="inline-flex items-center gap-1"><Clock class="w-3 h-3" /> {{ assignment.timeLabel }}</span>
-                      <span>Pickup {{ assignment.pickupDistanceLabel }}</span>
-                      <span>Dropoff {{ assignment.dropoffDistanceLabel }}</span>
-                      <span class="font-medium text-green-700">{{ assignment.earningsLabel }}</span>
-                    </div>
-                  </div>
-                  <div class="flex flex-col items-end gap-1 text-xs text-gray-500">
-                    <span class="px-2 py-0.5 rounded-full text-xs font-medium" :class="assignment.priorityBadge">{{ assignment.priorityLabel }}</span>
-                    <button class="text-xs text-blue-600 hover:underline" @click.stop="openPackageModal(assignment)">View details</button>
-                  </div>
-                </div>
-
-                <div class="grid md:grid-cols-2 gap-3 text-xs text-gray-600">
-                  <div>
-                    <div class="font-medium text-gray-800">Pickup Window</div>
-                    <div>{{ assignment.pickupWindow }}</div>
-                  </div>
-                  <div>
-                    <div class="font-medium text-gray-800">Contact</div>
-                    <div>{{ assignment.contactName }} - {{ assignment.contactPhone }}</div>
-                  </div>
-                </div>
-
-                <div class="flex flex-wrap items-center gap-2">
-                  <button
-                    class="h-8 px-3 text-xs rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-1 w-full sm:w-auto justify-center"
-                    @click.stop="callContact(assignment)"
-                  >
-                    <Phone class="w-3.5 h-3.5" />
-                    Call
-                  </button>
-                  <button
-                    class="h-8 px-3 text-xs rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-1 w-full sm:w-auto justify-center"
-                    @click.stop="messageContact(assignment)"
-                  >
-                    <MessageSquare class="w-3.5 h-3.5" />
-                    Message
-                  </button>
-                  <button
-                    v-if="assignment.status !== 'in_transit' && !assignment.localPicked"
-                    class="h-8 px-3 text-xs rounded-lg bg-green-600 text-white hover:bg-green-700 inline-flex items-center gap-1 w-full sm:w-auto justify-center"
-                    @click.stop="markPickedUp(assignment)"
-                  >
-                    <PackageIcon class="w-3.5 h-3.5" />
-                    Picked up
-                  </button>
-                  <button
-                    class="h-8 px-3 text-xs rounded-lg bg-blue-600 text-white hover:bg-blue-700 inline-flex items-center gap-1 w-full sm:w-auto justify-center"
-                    @click.stop="navigateTo(assignment)"
-                  >
-                    <Navigation class="w-3.5 h-3.5" />
-                    Navigate
-                  </button>
-                </div>
-              </article>
-            </div>
+          <div v-if="showInitialLoading" class="rounded-xl border bg-white shadow-sm px-4 py-6 flex items-center gap-3 text-sm text-gray-500">
+            <Spinner size="sm" />
+            Loading assignments…
           </div>
+          <div v-else-if="!assignmentGroups.some(group => group.items.length) && !loadError" class="rounded-xl border bg-white shadow-sm px-4 py-6 text-sm text-gray-500">
+            No assignments available right now.
+          </div>
+          <template v-else>
+            <div v-for="group in assignmentGroups" :key="group.id" class="rounded-xl border bg-white shadow-sm">
+              <header class="px-4 py-3 border-b flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="h-2.5 w-2.5 rounded-full" :class="group.dot"></span>
+                  <h2 class="text-sm font-semibold text-gray-800">{{ group.label }}</h2>
+                  <span class="text-xs text-gray-500">({{ group.items.length }})</span>
+                </div>
+              </header>
+              <div v-if="!group.items.length" class="px-4 py-6 text-sm text-gray-500">Nothing here right now.</div>
+              <div v-else class="divide-y">
+                <article
+                  v-for="assignment in group.items"
+                  :key="assignment.id"
+                  class="px-4 py-4 space-y-3 cursor-pointer hover:bg-blue-50/40"
+                  :class="selectedAssignmentId === assignment.id ? 'bg-blue-50/60' : ''"
+                  @click="selectAssignment(assignment.id)"
+                >
+                  <div class="flex items-start justify-between gap-3">
+                    <div>
+                      <div class="flex items-center gap-2 text-sm font-semibold text-gray-900">
+                        <Truck class="w-4 h-4" />
+                        {{ assignment.pickupLabel }}
+                      </div>
+                      <div class="text-xs text-gray-500">to {{ assignment.dropoffLabel }}</div>
+                      <div class="mt-1 flex items-center gap-3 text-xs text-gray-500">
+                        <span class="inline-flex items-center gap-1"><Clock class="w-3 h-3" /> {{ assignment.timeLabel }}</span>
+                        <span>Pickup {{ assignment.pickupDistanceLabel }}</span>
+                        <span>Dropoff {{ assignment.dropoffDistanceLabel }}</span>
+                        <span class="font-medium text-green-700">{{ assignment.earningsLabel }}</span>
+                      </div>
+                    </div>
+                    <div class="flex flex-col items-end gap-1 text-xs text-gray-500">
+                      <span class="px-2 py-0.5 rounded-full text-xs font-medium" :class="assignment.priorityBadge">{{ assignment.priorityLabel }}</span>
+                      <button class="text-xs text-blue-600 hover:underline" @click.stop="openPackageModal(assignment)">View details</button>
+                    </div>
+                  </div>
+
+                  <div class="grid md:grid-cols-2 gap-3 text-xs text-gray-600">
+                    <div>
+                      <div class="font-medium text-gray-800">Pickup Window</div>
+                      <div>{{ assignment.pickupWindow }}</div>
+                    </div>
+                    <div>
+                      <div class="font-medium text-gray-800">Contact</div>
+                      <div>{{ assignment.contactName }} - {{ assignment.contactPhone }}</div>
+                    </div>
+                  </div>
+
+                  <div class="flex flex-wrap items-center gap-2">
+                    <button
+                      class="h-8 px-3 text-xs rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-1 w-full sm:w-auto justify-center"
+                      @click.stop="callContact(assignment)"
+                    >
+                      <Phone class="w-3.5 h-3.5" />
+                      Call
+                    </button>
+                    <button
+                      class="h-8 px-3 text-xs rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-1 w-full sm:w-auto justify-center"
+                      @click.stop="messageContact(assignment)"
+                    >
+                      <MessageSquare class="w-3.5 h-3.5" />
+                      Message
+                    </button>
+                    <button
+                      v-if="assignment.status !== 'in_transit' && !assignment.localPicked"
+                      class="h-8 px-3 text-xs rounded-lg bg-green-600 text-white hover:bg-green-700 inline-flex items-center gap-1 w-full sm:w-auto justify-center"
+                      @click.stop="markPickedUp(assignment)"
+                    >
+                      <PackageIcon class="w-3.5 h-3.5" />
+                      Picked up
+                    </button>
+                    <button
+                      class="h-8 px-3 text-xs rounded-lg bg-blue-600 text-white hover:bg-blue-700 inline-flex items-center gap-1 w-full sm:w-auto justify-center"
+                      @click.stop="navigateTo(assignment)"
+                    >
+                      <Navigation class="w-3.5 h-3.5" />
+                      Navigate
+                    </button>
+                  </div>
+                </article>
+              </div>
+            </div>
+          </template>
         </div>
 
         <!-- Map & Task Drawer -->
@@ -291,6 +306,7 @@ import { useDriverDeliveries } from '@/composables/useDriverDeliveries'
 import SmallMap from '@/components/SmallMap.vue'
 import AssignmentPackageModal from '@/components/AssignmentPackageModal.vue'
 import CameraScanner from '@/components/CameraScanner.vue'
+import Spinner from '@/components/Spinner.vue'
 import { toast } from '@/utils/toast'
 import { geocodeAddress } from '@/utils/geocode'
 import type { DriverDeliveryItem, Package } from '@/types/api'
@@ -346,15 +362,9 @@ watch(
 
 const loadError = computed(() => deliveriesError.value || null)
 
-const fallbackDeliveries = createFallbackDeliveries()
+const showInitialLoading = computed(() => deliveriesLoading.value && (!future.value || future.value.length === 0) && !loadError.value)
 
-const displayAssignments = computed<DriverDeliveryItem[]>(() => {
-  const live = future.value
-  if (live && live.length) return live
-  if (deliveriesLoading.value) return fallbackDeliveries
-  if (loadError.value) return fallbackDeliveries
-  return fallbackDeliveries
-})
+const displayAssignments = computed<DriverDeliveryItem[]>(() => future.value ?? [])
 
 const enrichedAssignments = computed(() =>
   displayAssignments.value.map((entry, index) => enrichAssignment(entry, index))
@@ -826,151 +836,6 @@ function createTimelineEntries(id: string, entry: DriverDeliveryItem, status: As
   ]
 }
 
-function createFallbackDeliveries(): DriverDeliveryItem[] {
-  const now = new Date()
-  const today = now.toISOString().slice(0, 10)
-  return [
-    {
-      type: 'delivery',
-      delivery: {
-        id: 5012,
-        pickup_location: 'SamBring Logistics Hub',
-        delivery_location: 'Fjordgata 12, Oslo',
-        receiver: { name: 'Alex Johnson', phone: '+47 998 88 776' },
-        service: 'standard',
-        pickup_date: today,
-        pickup_time: '09:30:00',
-        delivery_date: today,
-        delivery_time: '10:15:00',
-        pickup_latitude: 59.9096,
-        pickup_longitude: 10.7449,
-        delivery_latitude: 59.9187,
-        delivery_longitude: 10.7523,
-      },
-      packages: [
-        {
-          id: 9101,
-          description: 'Organic produce crate',
-          weight: 4.5,
-          weight_unit: 'kg',
-          length: 40,
-          width: 35,
-          height: 25,
-          dimension_unit: 'cm',
-          hazardous: false,
-          fragile: true,
-          delivery_status: 'ready_for_pickup',
-        },
-      ],
-      location: 'Fjordgata 12, Oslo',
-      date: today,
-      time: '10:15:00',
-      pickup_location: 'SamBring Logistics Hub',
-      pickup_date: today,
-      pickup_time: '09:30:00',
-      pickup_latitude: 59.9096,
-      pickup_longitude: 10.7449,
-      delivery_latitude: 59.9187,
-      delivery_longitude: 10.7523,
-      actor: { name: 'Alex Johnson', phone: '+47 998 88 776' },
-      actor_type: 'receiver',
-      is_delivered: false,
-    },
-    {
-      type: 'delivery',
-      delivery: {
-        id: 5013,
-        pickup_location: 'Eco Market Warehouse',
-        delivery_location: 'Nordveien 22, Oslo',
-        receiver: { name: 'Maria Berg', phone: '+47 990 11 223' },
-        service: 'express',
-        pickup_date: today,
-        pickup_time: '11:00:00',
-        delivery_date: today,
-        delivery_time: '11:30:00',
-        pickup_latitude: 59.921,
-        pickup_longitude: 10.761,
-        delivery_latitude: 59.9265,
-        delivery_longitude: 10.7531,
-      },
-      packages: [
-        {
-          id: 9102,
-          description: 'Medical supplies',
-          weight: 2.1,
-          weight_unit: 'kg',
-          length: 30,
-          width: 25,
-          height: 20,
-          dimension_unit: 'cm',
-          hazardous: false,
-          fragile: false,
-          delivery_status: 'picked_up',
-        },
-      ],
-      location: 'Nordveien 22, Oslo',
-      date: today,
-      time: '11:30:00',
-      pickup_location: 'Eco Market Warehouse',
-      pickup_date: today,
-      pickup_time: '11:00:00',
-      pickup_latitude: 59.921,
-      pickup_longitude: 10.761,
-      delivery_latitude: 59.9265,
-      delivery_longitude: 10.7531,
-      actor: { name: 'Maria Berg', phone: '+47 990 11 223' },
-      actor_type: 'receiver',
-      is_delivered: false,
-    },
-    {
-      type: 'delivery',
-      delivery: {
-        id: 5014,
-        pickup_location: 'Downtown Electronics',
-        delivery_location: 'Storgata 84, Oslo',
-        receiver: { name: 'Leif Andersen', phone: '+47 955 44 332' },
-        service: 'same day',
-        pickup_date: today,
-        pickup_time: '13:15:00',
-        delivery_date: today,
-        delivery_time: '14:00:00',
-        pickup_latitude: 59.9175,
-        pickup_longitude: 10.733,
-        delivery_latitude: 59.9121,
-        delivery_longitude: 10.7608,
-      },
-      packages: [
-        {
-          id: 9103,
-          description: 'Refurbished laptop',
-          weight: 1.7,
-          weight_unit: 'kg',
-          length: 35,
-          width: 25,
-          height: 5,
-          dimension_unit: 'cm',
-          hazardous: false,
-          fragile: true,
-          delivery_status: 'in_transit',
-        },
-      ],
-      location: 'Storgata 84, Oslo',
-      date: today,
-      time: '14:00:00',
-      pickup_location: 'Downtown Electronics',
-      pickup_date: today,
-      pickup_time: '13:15:00',
-      pickup_latitude: 59.9175,
-      pickup_longitude: 10.733,
-      delivery_latitude: 59.9121,
-      delivery_longitude: 10.7608,
-      actor: { name: 'Leif Andersen', phone: '+47 955 44 332' },
-      actor_type: 'receiver',
-      is_delivered: false,
-    },
-  ]
-}
-
 interface AssignmentExtended {
   id: string
   original: DriverDeliveryItem
@@ -1020,62 +885,4 @@ type TimelineEvent = {
 }
 
 type TaskPriority = 'urgent' | 'express' | 'standard'
-
-function resolveDriverCoordinates(entry: DriverDeliveryItem) {
-  const e: any = entry
-  const candidates = [
-    { lat: e.driver_latitude, lng: e.driver_longitude },
-    { lat: e.current_latitude, lng: e.current_longitude },
-    { lat: e.vehicle_latitude, lng: e.vehicle_longitude },
-  ]
-  return selectCoordinate(candidates) ?? fallbackCoordinate(0)
-}
-
-function resolvePickupCoordinates(entry: DriverDeliveryItem) {
-  const e: any = entry
-  const d: any = entry.delivery || {}
-  const candidates = [
-    { lat: e.pickup_latitude, lng: e.pickup_longitude },
-    { lat: d.pickup_latitude, lng: d.pickup_longitude },
-    { lat: e.latitude, lng: e.longitude },
-  ]
-  return selectCoordinate(candidates) ?? fallbackCoordinate(0)
-}
-
-function resolveDropoffCoordinates(entry: DriverDeliveryItem) {
-  const e: any = entry
-  const d: any = entry.delivery || {}
-  const candidates = [
-    { lat: e.delivery_latitude, lng: e.delivery_longitude },
-    { lat: d.delivery_latitude, lng: d.delivery_longitude },
-    { lat: e.latitude, lng: e.longitude },
-  ]
-  return selectCoordinate(candidates) ?? fallbackCoordinate(0)
-}
-
-function selectCoordinate(candidates: Array<{ lat?: any; lng?: any }>) {
-  for (const candidate of candidates) {
-    const lat = toNumber(candidate.lat)
-    const lng = toNumber(candidate.lng)
-    if (lat != null && lng != null) return { lat, lng }
-  }
-  return null
-}
-
-function distanceBetween(
-  a: { lat: number; lng: number } | null,
-  b: { lat: number; lng: number } | null
-) {
-  if (!a || !b) return null
-  const lat1 = a.lat * (Math.PI / 180)
-  const lat2 = b.lat * (Math.PI / 180)
-  const dLat = (b.lat - a.lat) * (Math.PI / 180)
-  const dLng = (b.lng - a.lng) * (Math.PI / 180)
-  const sinLat = Math.sin(dLat / 2)
-  const sinLng = Math.sin(dLng / 2)
-  const h = sinLat * sinLat + Math.cos(lat1) * Math.cos(lat2) * sinLng * sinLng
-  const c = 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h))
-  const earthRadiusKm = 6371
-  return earthRadiusKm * c
-}
 </script>
