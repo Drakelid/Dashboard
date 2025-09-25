@@ -546,6 +546,25 @@ function getRouteDistanceKm(
   return null
 }
 
+async function ensureRouteDistance(id: string, entry: DriverDeliveryItem) {
+  const pickup = await ensurePickupCoordinates(id, entry)
+  const dropoff = await ensureDropoffCoordinates(id, entry)
+  if (!pickup || !dropoff) return
+
+  try {
+    const distanceKm = await getDrivingDistance(pickup, dropoff)
+    if (distanceKm != null) {
+      routeDistances[id] = distanceKm
+      return
+    }
+  } catch {}
+
+  const fallback = distanceBetween(pickup, dropoff)
+  if (fallback != null) {
+    routeDistances[id] = fallback
+  }
+}
+
 function updateFocusQuery(id: string | null) {
   const normalizedTarget = id ?? null
   const normalizedCurrent = normalizeFocus(route.query.focus)
@@ -728,7 +747,7 @@ function enrichAssignment(entry: DriverDeliveryItem, index: number): AssignmentE
   const pickupCoords = resolvePickupCoordinates(id, entry)
   const dropoffCoords = resolveDropoffCoordinates(id, entry)
 
-  const travelDistanceKm = getRouteDistanceKm(id, pickupCoords, dropoffCoords)
+  const travelDistanceKm = getRouteDistanceKm(id, entry, pickupCoords, dropoffCoords)
   const travelDistanceLabel = travelDistanceKm != null ? formatDistanceKm(travelDistanceKm) : null
 
   const fallbackPickupKm = distanceBetween(driverCoords, pickupCoords)
@@ -861,6 +880,7 @@ function resolveDriverCoordinates(entry: DriverDeliveryItem) {
 function resolvePickupCoordinates(id: string, entry: DriverDeliveryItem) {
   const cached = pickupCoordsCache[id]
   if (cached) return cached
+
   const e: any = entry
   const d: any = entry.delivery || {}
   const candidates = [
@@ -873,17 +893,15 @@ function resolvePickupCoordinates(id: string, entry: DriverDeliveryItem) {
     pickupCoordsCache[id] = coord
     return coord
   }
-  const address = entry.pickup_location || entry.delivery?.pickup_location
-  if (address && !pendingPickupGeocodes.has(id)) {
-    pendingPickupGeocodes.add(id)
-    geocodePickupLocation(id, address).finally(() => pendingPickupGeocodes.delete(id))
-  }
+
+  void ensurePickupCoordinates(id, entry)
   return pickupCoordsCache[id] || null
 }
 
 function resolveDropoffCoordinates(id: string, entry: DriverDeliveryItem) {
   const cached = dropoffCoordsCache[id]
   if (cached) return cached
+
   const e: any = entry
   const d: any = entry.delivery || {}
   const candidates = [
@@ -896,12 +914,65 @@ function resolveDropoffCoordinates(id: string, entry: DriverDeliveryItem) {
     dropoffCoordsCache[id] = coord
     return coord
   }
-  const address = entry.delivery?.delivery_location || entry.location
-  if (address && !pendingDropoffGeocodes.has(id)) {
-    pendingDropoffGeocodes.add(id)
-    geocodeDropoffLocation(id, address).finally(() => pendingDropoffGeocodes.delete(id))
-  }
+
+  void ensureDropoffCoordinates(id, entry)
   return dropoffCoordsCache[id] || null
+}
+
+async function ensurePickupCoordinates(id: string, entry: DriverDeliveryItem) {
+  const cached = pickupCoordsCache[id]
+  if (cached) return cached
+
+  const pending = pendingPickupPromises.get(id)
+  if (pending) return pending
+
+  const address = entry.pickup_location || entry.delivery?.pickup_location
+  if (!address) {
+    pickupCoordsCache[id] = null
+    return null
+  }
+
+  const promise = geocodeAddress(address)
+    .then(result => {
+      if (result) {
+        pickupCoordsCache[id] = result
+        return result
+      }
+      pickupCoordsCache[id] = null
+      return null
+    })
+    .finally(() => pendingPickupPromises.delete(id))
+
+  pendingPickupPromises.set(id, promise)
+  return promise
+}
+
+async function ensureDropoffCoordinates(id: string, entry: DriverDeliveryItem) {
+  const cached = dropoffCoordsCache[id]
+  if (cached) return cached
+
+  const pending = pendingDropoffPromises.get(id)
+  if (pending) return pending
+
+  const address = entry.delivery?.delivery_location || entry.location
+  if (!address) {
+    dropoffCoordsCache[id] = null
+    return null
+  }
+
+  const promise = geocodeAddress(address)
+    .then(result => {
+      if (result) {
+        dropoffCoordsCache[id] = result
+        return result
+      }
+      dropoffCoordsCache[id] = null
+      return null
+    })
+    .finally(() => pendingDropoffPromises.delete(id))
+
+  pendingDropoffPromises.set(id, promise)
+  return promise
 }
 
 function selectCoordinate(candidates: Array<{ lat?: any; lng?: any }>) {
@@ -964,16 +1035,6 @@ function fallbackCoordinate(index: number) {
   const baseLng = 10.7522
   const offset = index * 0.003
   return { lat: baseLat + offset, lng: baseLng + offset }
-}
-
-async function geocodePickupLocation(id: string, address: string) {
-  const result = await geocodeAddress(address)
-  if (result) pickupCoordsCache[id] = result
-}
-
-async function geocodeDropoffLocation(id: string, address: string) {
-  const result = await geocodeAddress(address)
-  if (result) dropoffCoordsCache[id] = result
 }
 
 function toNumber(value: any): number | null {
