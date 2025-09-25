@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <teleport to="body">
     <div v-if="open" class="fixed inset-0 z-[1200]">
       <div class="absolute inset-0 bg-black/40" @click="emit('close')" />
@@ -16,39 +16,63 @@
 
           <div class="max-h-[60vh] overflow-y-auto divide-y">
             <div v-if="!packages.length" class="px-4 py-6 text-sm text-gray-500">No package details available.</div>
-            <article v-for="pkg in packages" :key="pkg.id ?? pkg.description" class="px-4 py-3 space-y-2">
-              <div class="flex items-center justify-between">
-                <div class="text-sm font-semibold">Package {{ pkg.id ?? 'unknown' }}</div>
-                <span class="text-xs px-2 py-0.5 rounded-full" :class="pkg.hazardous ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'">
-                  {{ pkg.hazardous ? 'Hazardous' : 'Eco' }}
-                </span>
+            <article
+              v-for="pkg in packages"
+              :key="pkg.id ?? pkg.description"
+              class="px-4 py-4 space-y-4 odd:bg-white even:bg-gray-50/60"
+            >
+              <header class="flex flex-wrap items-start justify-between gap-3">
+                <div class="space-y-1">
+                  <p class="text-sm font-semibold text-gray-900">Package {{ formatPackageId(pkg) }}</p>
+                  <p class="text-xs text-gray-500">{{ pkg.description || 'No description provided.' }}</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span
+                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border text-[11px] font-semibold uppercase tracking-wide"
+                    :class="statusVariant(pkg).class"
+                  >
+                    {{ statusVariant(pkg).label }}
+                  </span>
+                  <span
+                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border text-[11px] font-medium"
+                    :class="hazardBadge(pkg).class"
+                  >
+                    {{ hazardBadge(pkg).label }}
+                  </span>
+                </div>
+              </header>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs text-gray-600">
+                <div class="space-y-1">
+                  <span class="font-medium text-gray-700 uppercase tracking-wide">Weight</span>
+                  <span class="text-sm font-semibold text-gray-900">{{ formatWeight(pkg) }}</span>
+                </div>
+                <div class="space-y-1">
+                  <span class="font-medium text-gray-700 uppercase tracking-wide">Dimensions</span>
+                  <span class="text-sm font-semibold text-gray-900">{{ formatDimensions(pkg) }}</span>
+                </div>
+                <div class="space-y-1">
+                  <span class="font-medium text-gray-700 uppercase tracking-wide">Volume</span>
+                  <span class="text-sm font-semibold text-gray-900">{{ formatVolume(pkg) }}</span>
+                </div>
+                <div class="space-y-1">
+                  <span class="font-medium text-gray-700 uppercase tracking-wide">Status</span>
+                  <span class="text-sm font-semibold text-gray-900">{{ formatStatus(pkg) }}</span>
+                </div>
               </div>
-              <div class="grid grid-cols-2 gap-3 text-xs text-gray-600">
-                <div>
-                  <div class="font-medium text-gray-800">Description</div>
-                  <div>{{ pkg.description || '-' }}</div>
+
+              <footer class="pt-3 border-t border-dashed">
+                <div class="flex flex-wrap items-center gap-2 text-[11px]">
+                  <span
+                    v-for="tag in handlingTags(pkg)"
+                    :key="tag.label"
+                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border font-medium"
+                    :class="tag.class"
+                  >
+                    {{ tag.label }}
+                  </span>
                 </div>
-                <div>
-                  <div class="font-medium text-gray-800">Weight</div>
-                  <div>{{ formatWeight(pkg) }}</div>
-                </div>
-                <div>
-                  <div class="font-medium text-gray-800">Dimensions</div>
-                  <div>{{ formatDimensions(pkg) }}</div>
-                </div>
-                <div>
-                  <div class="font-medium text-gray-800">Status</div>
-                  <div class="capitalize">{{ (pkg.delivery_status || 'pending').replace(/_/g, ' ') }}</div>
-                </div>
-              </div>
-              <div class="text-xs text-gray-600">
-                <div class="font-medium text-gray-800 mb-1">Handling</div>
-                <ul class="list-disc ml-4 space-y-0.5">
-                  <li v-if="pkg.fragile">Fragile - handle with care</li>
-                  <li v-if="pkg.temperature_c">Temperature sensitive: {{ formatTemperature(pkg) }}</li>
-                  <li v-if="!pkg.fragile && !pkg.temperature_c">No special handling notes.</li>
-                </ul>
-              </div>
+              </footer>
             </article>
           </div>
 
@@ -100,5 +124,58 @@ function formatDimensions(pkg: Package) {
 function formatTemperature(pkg: Package) {
   const unit = pkg.temperature_unit || 'C'
   return `${pkg.temperature_c} ${unit}`
+}
+
+function formatVolume(pkg: Package) {
+  if (pkg.volume_liters != null) return `${pkg.volume_liters} L`
+  if (pkg.length && pkg.width && pkg.height) {
+    const volume = Number(pkg.length) * Number(pkg.width) * Number(pkg.height)
+    if (Number.isFinite(volume)) {
+      return `${volume} ${pkg.dimension_unit || 'cm'}³`
+    }
+  }
+  return '-'
+}
+
+function formatStatus(pkg: Package) {
+  const status = (pkg.delivery_status || 'pending').replace(/_/g, ' ')
+  return status.charAt(0).toUpperCase() + status.slice(1)
+}
+
+function statusVariant(pkg: Package) {
+  const status = (pkg.delivery_status || '').toLowerCase()
+  if (status.includes('delivered')) {
+    return { label: 'Delivered', class: 'border-green-600 text-green-700 bg-green-50' }
+  }
+  if (status.includes('picked')) {
+    return { label: 'Picked up', class: 'border-blue-600 text-blue-700 bg-blue-50' }
+  }
+  if (status.includes('exception') || status.includes('issue')) {
+    return { label: 'Needs attention', class: 'border-orange-500 text-orange-600 bg-orange-50' }
+  }
+  return { label: 'Pending', class: 'border-gray-300 text-gray-600 bg-gray-50' }
+}
+
+function hazardBadge(pkg: Package) {
+  if (pkg.hazardous) {
+    return { label: 'Hazardous', class: 'border-orange-500 text-orange-600 bg-orange-50' }
+  }
+  if (pkg.fragile) {
+    return { label: 'Fragile', class: 'border-rose-500 text-rose-600 bg-rose-50' }
+  }
+  return { label: 'Standard', class: 'border-emerald-500 text-emerald-600 bg-emerald-50' }
+}
+
+function handlingTags(pkg: Package) {
+  const tags: Array<{ label: string; class: string }> = []
+  if (pkg.fragile) tags.push({ label: 'Fragile item', class: 'border-rose-400 text-rose-600 bg-rose-50' })
+  if (pkg.temperature_c != null) tags.push({ label: `Keep at ${formatTemperature(pkg)}`, class: 'border-sky-400 text-sky-600 bg-sky-50' })
+  if (pkg.hazardous) tags.push({ label: 'Hazard handling required', class: 'border-orange-400 text-orange-600 bg-orange-50' })
+  if (!tags.length) tags.push({ label: 'No special handling', class: 'border-gray-300 text-gray-600 bg-gray-50' })
+  return tags
+}
+
+function formatPackageId(pkg: Package) {
+  return pkg.id != null ? `#${pkg.id}` : 'N/A'
 }
 </script>
