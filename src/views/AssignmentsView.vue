@@ -198,7 +198,7 @@
                       {{ pickupInFlight[assignment.id] ? 'Confirming…' : 'Picked up' }}
                     </button>
                     <button
-                      v-if="!assignment.localDelivered && (assignment.status !== 'ready' || assignment.localPicked)"
+                      v-if="!assignment.localDelivered"
                       class="h-8 px-3 text-xs rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 inline-flex items-center gap-1 w-full sm:w-auto justify-center disabled:opacity-60 disabled:cursor-not-allowed"
                       :disabled="deliveryInFlight[assignment.id]"
                       @click.stop="markDelivered(assignment)"
