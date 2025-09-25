@@ -363,6 +363,8 @@ const assignmentCoords = reactive<Record<string, { lat: number; lng: number }>>(
 const pendingGeocodes = new Set<string>()
 const pickupCoordsCache = reactive<Record<string, { lat: number; lng: number } | null>>({})
 const dropoffCoordsCache = reactive<Record<string, { lat: number; lng: number } | null>>({})
+const pickupRouteDistances = reactive<Record<string, number | null>>({})
+const pendingPickupRoutePromises = new Map<string, Promise<void>>()
 const pendingPickupPromises = new Map<string, Promise<{ lat: number; lng: number } | null>>()
 const pendingDropoffPromises = new Map<string, Promise<{ lat: number; lng: number } | null>>()
 const pendingDistancePromises = new Map<string, Promise<void>>()
@@ -546,6 +548,24 @@ function getRouteDistanceKm(
   return null
 }
 
+function getPickupRouteDistanceKm(
+  id: string,
+  entry: DriverDeliveryItem,
+  driverCoords: { lat: number; lng: number } | null,
+  pickupCoords: { lat: number; lng: number } | null
+) {
+  const stored = pickupRouteDistances[id]
+  if (stored != null) return stored
+
+  if (!pendingPickupRoutePromises.has(id)) {
+    const promise = ensurePickupRouteDistance(id, entry, driverCoords).finally(() => pendingPickupRoutePromises.delete(id))
+    pendingPickupRoutePromises.set(id, promise)
+  }
+
+  if (driverCoords && pickupCoords) return distanceBetween(driverCoords, pickupCoords)
+  return null
+}
+
 async function ensureRouteDistance(id: string, entry: DriverDeliveryItem) {
   const pickup = await ensurePickupCoordinates(id, entry)
   const dropoff = await ensureDropoffCoordinates(id, entry)
@@ -562,6 +582,37 @@ async function ensureRouteDistance(id: string, entry: DriverDeliveryItem) {
   const fallback = distanceBetween(pickup, dropoff)
   if (fallback != null) {
     routeDistances[id] = fallback
+  }
+}
+
+async function ensurePickupRouteDistance(
+  id: string,
+  entry: DriverDeliveryItem,
+  driverCoords: { lat: number; lng: number } | null
+) {
+  const pickup = await ensurePickupCoordinates(id, entry)
+  if (!pickup) return
+
+  const origin = driverCoords || resolveDriverCoordinates(entry)
+  if (!origin) {
+    const fallback = assignmentCoords[id] ? distanceBetween(assignmentCoords[id], pickup) : null
+    if (fallback != null) {
+      pickupRouteDistances[id] = fallback
+    }
+    return
+  }
+
+  try {
+    const distanceKm = await getDrivingDistance(origin, pickup)
+    if (distanceKm != null) {
+      pickupRouteDistances[id] = distanceKm
+      return
+    }
+  } catch {}
+
+  const fallback = distanceBetween(origin, pickup)
+  if (fallback != null) {
+    pickupRouteDistances[id] = fallback
   }
 }
 
@@ -747,16 +798,21 @@ function enrichAssignment(entry: DriverDeliveryItem, index: number): AssignmentE
   const pickupCoords = resolvePickupCoordinates(id, entry)
   const dropoffCoords = resolveDropoffCoordinates(id, entry)
 
-  const travelDistanceKm = getRouteDistanceKm(id, entry, pickupCoords, dropoffCoords)
-  const travelDistanceLabel = travelDistanceKm != null ? formatDistanceKm(travelDistanceKm) : null
+  const pickupRouteKm = getPickupRouteDistanceKm(id, entry, driverCoords, pickupCoords)
+  const dropoffRouteKm = getRouteDistanceKm(id, entry, pickupCoords, dropoffCoords)
+  const travelDistanceLabel = dropoffRouteKm != null ? formatDistanceKm(dropoffRouteKm) : null
 
-  const fallbackPickupKm = distanceBetween(driverCoords, pickupCoords)
-  const fallbackDropoffKm = distanceBetween(driverCoords, dropoffCoords)
-  const pickupDistanceKm = travelDistanceKm ?? fallbackPickupKm ?? distanceBetween(pickupCoords, dropoffCoords)
-  const dropoffDistanceKm = travelDistanceKm ?? fallbackDropoffKm ?? distanceBetween(pickupCoords, dropoffCoords)
+  const fallbackPickupKm =
+    pickupRouteKm ??
+    (driverCoords && pickupCoords ? distanceBetween(driverCoords, pickupCoords) : null) ??
+    (pickupCoords && assignmentCoords[id] ? distanceBetween(pickupCoords, assignmentCoords[id]) : null)
 
-  const pickupDistanceLabel = travelDistanceLabel || (pickupDistanceKm != null ? formatDistanceKm(pickupDistanceKm) : formatDistance(entry))
-  const dropoffDistanceLabel = travelDistanceLabel || (dropoffDistanceKm != null ? formatDistanceKm(dropoffDistanceKm) : formatDistance(entry))
+  const fallbackDropoffKm =
+    dropoffRouteKm ??
+    (pickupCoords && dropoffCoords ? distanceBetween(pickupCoords, dropoffCoords) : null)
+
+  const pickupDistanceLabel = fallbackPickupKm != null ? formatDistanceKm(fallbackPickupKm) : formatDistance(entry)
+  const dropoffDistanceLabel = fallbackDropoffKm != null ? formatDistanceKm(fallbackDropoffKm) : formatDistance(entry)
   const tasks = createMicroTasks(id, status)
   const timeline = createTimelineEntries(id, entry, status)
   const localPicked = !!pickedUpState[id]
