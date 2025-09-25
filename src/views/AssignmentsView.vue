@@ -321,6 +321,7 @@ import Spinner from '@/components/Spinner.vue'
 import { pickup as pickupPackage, deliver as deliverPackage } from '@/api/packages'
 import { toast } from '@/utils/toast'
 import { geocodeAddress } from '@/utils/geocode'
+import { getDrivingDistance } from '@/utils/routing'
 import type { DriverDeliveryItem, Package } from '@/types/api'
 import {
   Check,
@@ -360,6 +361,8 @@ const pickupInFlight = reactive<Record<string, boolean>>({})
 const deliveryInFlight = reactive<Record<string, boolean>>({})
 const assignmentCoords = reactive<Record<string, { lat: number; lng: number }>>({})
 const pendingGeocodes = new Set<string>()
+const routeDistances = reactive<Record<string, number | null>>({})
+const pendingRoutes = new Set<string>()
 
 onMounted(() => {
   if (!future.value) {
@@ -517,6 +520,33 @@ const performanceMetrics = computed(() => {
 function selectAssignment(id: string) {
   selectedAssignmentId.value = id
   updateFocusQuery(id)
+}
+
+function getRouteDistanceKm(
+  id: string,
+  pickupCoords: { lat: number; lng: number } | null,
+  dropoffCoords: { lat: number; lng: number } | null
+) {
+  const stored = routeDistances[id]
+  if (stored != null) return stored
+  if (pickupCoords && dropoffCoords && !pendingRoutes.has(id)) {
+    pendingRoutes.add(id)
+    fetchRouteDistance(id, pickupCoords, dropoffCoords).finally(() => pendingRoutes.delete(id))
+  }
+  return pickupCoords && dropoffCoords ? distanceBetween(pickupCoords, dropoffCoords) : null
+}
+
+async function fetchRouteDistance(
+  id: string,
+  pickupCoords: { lat: number; lng: number },
+  dropoffCoords: { lat: number; lng: number }
+) {
+  const distanceKm = await getDrivingDistance(pickupCoords, dropoffCoords)
+  if (distanceKm != null) {
+    routeDistances[id] = distanceKm
+  } else if (routeDistances[id] == null) {
+    routeDistances[id] = distanceBetween(pickupCoords, dropoffCoords)
+  }
 }
 
 function updateFocusQuery(id: string | null) {
@@ -701,11 +731,16 @@ function enrichAssignment(entry: DriverDeliveryItem, index: number): AssignmentE
   const pickupCoords = resolvePickupCoordinates(entry)
   const dropoffCoords = resolveDropoffCoordinates(entry)
 
-  const pickupDistanceKm = distanceBetween(driverCoords, pickupCoords) ?? distanceBetween(pickupCoords, dropoffCoords)
-  const dropoffDistanceKm = distanceBetween(driverCoords, dropoffCoords) ?? distanceBetween(pickupCoords, dropoffCoords)
+  const travelDistanceKm = getRouteDistanceKm(id, pickupCoords, dropoffCoords)
+  const travelDistanceLabel = travelDistanceKm != null ? formatDistanceKm(travelDistanceKm) : null
 
-  const pickupDistanceLabel = pickupDistanceKm != null ? formatDistanceKm(pickupDistanceKm) : formatDistance(entry)
-  const dropoffDistanceLabel = dropoffDistanceKm != null ? formatDistanceKm(dropoffDistanceKm) : formatDistance(entry)
+  const fallbackPickupKm = distanceBetween(driverCoords, pickupCoords)
+  const fallbackDropoffKm = distanceBetween(driverCoords, dropoffCoords)
+  const pickupDistanceKm = travelDistanceKm ?? fallbackPickupKm ?? distanceBetween(pickupCoords, dropoffCoords)
+  const dropoffDistanceKm = travelDistanceKm ?? fallbackDropoffKm ?? distanceBetween(pickupCoords, dropoffCoords)
+
+  const pickupDistanceLabel = travelDistanceLabel || (pickupDistanceKm != null ? formatDistanceKm(pickupDistanceKm) : formatDistance(entry))
+  const dropoffDistanceLabel = travelDistanceLabel || (dropoffDistanceKm != null ? formatDistanceKm(dropoffDistanceKm) : formatDistance(entry))
   const tasks = createMicroTasks(id, status)
   const timeline = createTimelineEntries(id, entry, status)
   const localPicked = !!pickedUpState[id]
@@ -726,7 +761,7 @@ function enrichAssignment(entry: DriverDeliveryItem, index: number): AssignmentE
     earningsValue,
     earningsLabel: earningsValue ? formatCurrency(earningsValue) : 'kr 0',
     timeLabel: formatTime(entry) || 'Time TBD',
-    distanceLabel: localDelivered ? 'Delivered' : (effectiveStatus === 'ready' ? pickupDistanceLabel : dropoffDistanceLabel) || pickupDistanceLabel || dropoffDistanceLabel || 'Distance TBD',
+    distanceLabel: localDelivered ? 'Delivered' : travelDistanceLabel || (effectiveStatus === 'ready' ? pickupDistanceLabel : dropoffDistanceLabel) || 'Distance TBD',
     pickupDistanceLabel: pickupDistanceLabel || 'Distance TBD',
     dropoffDistanceLabel: localDelivered ? 'Delivered' : dropoffDistanceLabel || 'Distance TBD',
     pickupWindow,
