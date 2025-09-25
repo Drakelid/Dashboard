@@ -138,81 +138,111 @@
                 <article
                   v-for="assignment in group.items"
                   :key="assignment.id"
-                  class="px-4 py-4 space-y-3 cursor-pointer hover:bg-blue-50/40"
-                  :class="selectedAssignmentId === assignment.id ? 'bg-blue-50/60' : ''"
+                  class="px-4 py-4 cursor-pointer transition-colors"
+                  :class="selectedAssignmentId === assignment.id ? 'bg-blue-50/70 border-l-4 border-blue-500' : 'hover:bg-blue-50/40'"
                   @click="selectAssignment(assignment.id)"
                 >
-                  <div class="flex items-start justify-between gap-3">
-                    <div>
-                      <div class="flex items-center gap-2 text-sm font-semibold text-gray-900">
-                        <Truck class="w-4 h-4" />
-                        {{ assignment.pickupLabel }}
+                  <div class="flex flex-col gap-4">
+                    <div class="flex flex-wrap items-start justify-between gap-4">
+                      <div class="space-y-1">
+                        <div class="flex flex-wrap items-center gap-2 text-sm font-semibold text-gray-900">
+                          <Truck class="w-4 h-4" />
+                          <span>{{ assignment.pickupLabel }}</span>
+                          <span class="text-gray-400">→</span>
+                          <span>{{ assignment.dropoffLabel }}</span>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                          <span class="inline-flex items-center gap-1"><Clock class="w-3 h-3" /> {{ assignment.timeLabel }}</span>
+                          <span class="inline-flex items-center gap-1"><MapPin class="w-3 h-3" /> Pickup {{ assignment.pickupDistanceLabel }}</span>
+                          <span class="inline-flex items-center gap-1"><Navigation class="w-3 h-3" /> Dropoff {{ assignment.dropoffDistanceLabel }}</span>
+                          <span class="inline-flex items-center gap-1 font-semibold text-emerald-700"><BadgeDollarSign class="w-3 h-3" /> {{ assignment.earningsLabel }}</span>
+                        </div>
                       </div>
-                      <div class="text-xs text-gray-500">to {{ assignment.dropoffLabel }}</div>
-                      <div class="mt-1 flex items-center gap-3 text-xs text-gray-500">
-                        <span class="inline-flex items-center gap-1"><Clock class="w-3 h-3" /> {{ assignment.timeLabel }}</span>
-                        <span>Pickup {{ assignment.pickupDistanceLabel }}</span>
-                        <span>Dropoff {{ assignment.dropoffDistanceLabel }}</span>
-                        <span class="font-medium text-green-700">{{ assignment.earningsLabel }}</span>
+                      <div class="flex flex-col items-end gap-2 text-right">
+                        <div class="flex flex-wrap items-center justify-end gap-2">
+                          <span class="px-2 py-0.5 rounded-full text-xs font-medium" :class="assignment.priorityBadge">{{ assignment.priorityLabel }}</span>
+                          <span
+                            class="px-2 py-0.5 rounded-full text-xs font-medium border"
+                            :class="assignment.status === 'in_transit' ? 'border-amber-300 bg-amber-50 text-amber-700' : 'border-blue-300 bg-blue-50 text-blue-700'"
+                          >
+                            {{ assignment.status === 'in_transit' ? 'In transit' : 'Ready for pickup' }}
+                          </span>
+                        </div>
+                        <button class="text-xs text-blue-600 hover:underline" @click.stop="openPackageModal(assignment)">View package details</button>
                       </div>
                     </div>
-                    <div class="flex flex-col items-end gap-1 text-xs text-gray-500">
-                      <span class="px-2 py-0.5 rounded-full text-xs font-medium" :class="assignment.priorityBadge">{{ assignment.priorityLabel }}</span>
-                      <button class="text-xs text-blue-600 hover:underline" @click.stop="openPackageModal(assignment)">View details</button>
-                    </div>
-                  </div>
 
-                  <div class="grid md:grid-cols-2 gap-3 text-xs text-gray-600">
-                    <div>
-                      <div class="font-medium text-gray-800">Pickup Window</div>
-                      <div>{{ assignment.pickupWindow }}</div>
+                    <div class="grid gap-3 text-xs text-gray-600 md:grid-cols-3">
+                      <div class="rounded-lg border bg-gray-50 px-3 py-2">
+                        <div class="font-medium text-gray-800 uppercase tracking-wide text-[11px]">Pickup window</div>
+                        <div class="mt-1 text-sm font-semibold text-gray-900">{{ assignment.pickupWindow }}</div>
+                      </div>
+                      <div class="rounded-lg border bg-gray-50 px-3 py-2">
+                        <div class="font-medium text-gray-800 uppercase tracking-wide text-[11px]">Contact</div>
+                        <div class="mt-1 text-sm font-semibold text-gray-900">{{ assignment.contactName }}</div>
+                        <div class="text-[11px] text-gray-500">{{ assignment.contactPhone }}</div>
+                      </div>
+                      <div class="rounded-lg border bg-gray-50 px-3 py-2">
+                        <div class="font-medium text-gray-800 uppercase tracking-wide text-[11px]">Packages</div>
+                        <div class="mt-1 flex flex-wrap items-center gap-1">
+                          <span class="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-2 py-0.5 text-[11px] text-gray-600">
+                            <PackageIcon class="w-3 h-3 text-gray-500" />
+                            {{ assignment.packages.length }} total
+                          </span>
+                          <span
+                            v-for="pkg in assignment.packages.slice(0, 3)"
+                            :key="pkg.id ?? `${assignment.id}-pkg-${pkg.description}`"
+                            class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px]"
+                            :class="pkg.hazardous ? 'border-orange-400 text-orange-600 bg-orange-50' : pkg.fragile ? 'border-rose-300 text-rose-600 bg-rose-50' : 'border-emerald-300 text-emerald-600 bg-emerald-50'"
+                          >
+                            {{ pkg.hazardous ? 'Hazardous' : pkg.fragile ? 'Fragile' : 'Standard' }}
+                          </span>
+                          <span v-if="assignment.packages.length > 3" class="text-[11px] text-gray-500">+{{ assignment.packages.length - 3 }} more</span>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <div class="font-medium text-gray-800">Contact</div>
-                      <div>{{ assignment.contactName }} - {{ assignment.contactPhone }}</div>
-                    </div>
-                  </div>
 
-                  <div class="flex flex-wrap items-center gap-2">
-                    <button
-                      class="h-8 px-3 text-xs rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-1 w-full sm:w-auto justify-center"
-                      @click.stop="callContact(assignment)"
-                    >
-                      <Phone class="w-3.5 h-3.5" />
-                      Call
-                    </button>
-                    <button
-                      class="h-8 px-3 text-xs rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-1 w-full sm:w-auto justify-center"
-                      @click.stop="messageContact(assignment)"
-                    >
-                      <MessageSquare class="w-3.5 h-3.5" />
-                      Message
-                    </button>
-                    <button
-                      v-if="assignment.status !== 'in_transit' && !assignment.localPicked"
-                      class="h-8 px-3 text-xs rounded-lg bg-green-600 text-white hover:bg-green-700 inline-flex items-center gap-1 w-full sm:w-auto justify-center disabled:opacity-60 disabled:cursor-not-allowed"
-                      :disabled="pickupInFlight[assignment.id]"
-                      @click.stop="markPickedUp(assignment)"
-                    >
-                      <PackageIcon class="w-3.5 h-3.5" />
-                      {{ pickupInFlight[assignment.id] ? 'Confirming…' : 'Picked up' }}
-                    </button>
-                    <button
-                      v-if="!assignment.localDelivered"
-                      class="h-8 px-3 text-xs rounded-lg border border-emerald-500 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 inline-flex items-center gap-1 w-full sm:w-auto justify-center disabled:opacity-60 disabled:cursor-not-allowed"
-                      :disabled="deliveryInFlight[assignment.id]"
-                      @click.stop="startDeliveryConfirmation(assignment)"
-                    >
-                      <CheckCircle class="w-3.5 h-3.5 text-emerald-600" />
-                      {{ deliveryInFlight[assignment.id] ? 'Submitting…' : 'Delivered' }}
-                    </button>
-                    <button
-                      class="h-8 px-3 text-xs rounded-lg bg-blue-600 text-white hover:bg-blue-700 inline-flex items-center gap-1 w-full sm:w-auto justify-center"
-                      @click.stop="navigateTo(assignment)"
-                    >
-                      <Navigation class="w-3.5 h-3.5" />
-                      Navigate
-                    </button>
+                    <div class="flex flex-wrap items-center gap-2">
+                      <button
+                        class="h-9 px-3 text-xs rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-1 w-full sm:w-auto justify-center"
+                        @click.stop="callContact(assignment)"
+                      >
+                        <Phone class="w-3.5 h-3.5" />
+                        Call
+                      </button>
+                      <button
+                        class="h-9 px-3 text-xs rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-1 w-full sm:w-auto justify-center"
+                        @click.stop="messageContact(assignment)"
+                      >
+                        <MessageSquare class="w-3.5 h-3.5" />
+                        Message
+                      </button>
+                      <button
+                        v-if="assignment.status !== 'in_transit' && !assignment.localPicked"
+                        class="h-9 px-3 text-xs rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 inline-flex items-center gap-1 w-full sm:w-auto justify-center disabled:opacity-60 disabled:cursor-not-allowed"
+                        :disabled="pickupInFlight[assignment.id]"
+                        @click.stop="markPickedUp(assignment)"
+                      >
+                        <ClipboardCheck class="w-3.5 h-3.5" />
+                        {{ pickupInFlight[assignment.id] ? 'Confirming…' : 'Mark picked up' }}
+                      </button>
+                      <button
+                        v-if="!assignment.localDelivered"
+                        class="h-9 px-3 text-xs rounded-lg border border-emerald-500 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 inline-flex items-center gap-1 w-full sm:w-auto justify-center disabled:opacity-60 disabled:cursor-not-allowed"
+                        :disabled="deliveryInFlight[assignment.id]"
+                        @click.stop="startDeliveryConfirmation(assignment)"
+                      >
+                        <CheckCircle class="w-3.5 h-3.5 text-emerald-600" />
+                        {{ deliveryInFlight[assignment.id] ? 'Submitting…' : 'Delivered' }}
+                      </button>
+                      <button
+                        class="h-9 px-3 text-xs rounded-lg bg-blue-600 text-white hover:bg-blue-700 inline-flex items-center gap-1 w-full sm:w-auto justify-center"
+                        @click.stop="navigateTo(assignment)"
+                      >
+                        <Navigation class="w-3.5 h-3.5" />
+                        Navigate
+                      </button>
+                    </div>
                   </div>
                 </article>
               </div>
