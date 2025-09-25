@@ -190,19 +190,21 @@
                     </button>
                     <button
                       v-if="assignment.status !== 'in_transit' && !assignment.localPicked"
-                      class="h-8 px-3 text-xs rounded-lg bg-green-600 text-white hover:bg-green-700 inline-flex items-center gap-1 w-full sm:w-auto justify-center"
+                      class="h-8 px-3 text-xs rounded-lg bg-green-600 text-white hover:bg-green-700 inline-flex items-center gap-1 w-full sm:w-auto justify-center disabled:opacity-60 disabled:cursor-not-allowed"
+                      :disabled="pickupInFlight[assignment.id]"
                       @click.stop="markPickedUp(assignment)"
                     >
                       <PackageIcon class="w-3.5 h-3.5" />
-                      Picked up
+                      {{ pickupInFlight[assignment.id] ? 'Confirming…' : 'Picked up' }}
                     </button>
                     <button
                       v-if="group.id === 'in_transit' && !assignment.localDelivered"
-                      class="h-8 px-3 text-xs rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 inline-flex items-center gap-1 w-full sm:w-auto justify-center"
+                      class="h-8 px-3 text-xs rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 inline-flex items-center gap-1 w-full sm:w-auto justify-center disabled:opacity-60 disabled:cursor-not-allowed"
+                      :disabled="deliveryInFlight[assignment.id]"
                       @click.stop="markDelivered(assignment)"
                     >
                       <CheckCircle class="w-3.5 h-3.5" />
-                      Delivered
+                      {{ deliveryInFlight[assignment.id] ? 'Submitting…' : 'Delivered' }}
                     </button>
                     <button
                       class="h-8 px-3 text-xs rounded-lg bg-blue-600 text-white hover:bg-blue-700 inline-flex items-center gap-1 w-full sm:w-auto justify-center"
@@ -316,6 +318,7 @@ import SmallMap from '@/components/SmallMap.vue'
 import AssignmentPackageModal from '@/components/AssignmentPackageModal.vue'
 import CameraScanner from '@/components/CameraScanner.vue'
 import Spinner from '@/components/Spinner.vue'
+import { confirmPickup, confirmDelivery } from '@/api/driver'
 import { toast } from '@/utils/toast'
 import { geocodeAddress } from '@/utils/geocode'
 import type { DriverDeliveryItem, Package } from '@/types/api'
@@ -351,6 +354,8 @@ const packageModalOpen = ref(false)
 const scannerOpen = ref(false)
 const pickedUpState = reactive<Record<string, boolean>>({})
 const deliveredState = reactive<Record<string, boolean>>({})
+const pickupInFlight = reactive<Record<string, boolean>>({})
+const deliveryInFlight = reactive<Record<string, boolean>>({})
 const assignmentCoords = reactive<Record<string, { lat: number; lng: number }>>({})
 const pendingGeocodes = new Set<string>()
 
@@ -560,14 +565,55 @@ function messageContact(assignment: AssignmentExtended) {
   toast.info(`Starting chat with ${assignment.contactName}`)
 }
 
-function markPickedUp(assignment: AssignmentExtended) {
-  pickedUpState[assignment.id] = true
-  toast.success(`Marked assignment #${assignment.id} as picked up`)
+function resolveDeliveryIdentifier(assignment: AssignmentExtended): string | number | null {
+  const delivery: any = assignment.original.delivery
+  if (delivery?.id != null) return delivery.id
+  if (delivery?.uuid) return delivery.uuid
+  return assignment.id || null
 }
 
-function markDelivered(assignment: AssignmentExtended) {
-  deliveredState[assignment.id] = true
-  toast.success(`Great job! Assignment #${assignment.id} marked as delivered`)
+async function markPickedUp(assignment: AssignmentExtended) {
+  if (pickupInFlight[assignment.id]) return
+  const deliveryIdentifier = resolveDeliveryIdentifier(assignment)
+  if (!deliveryIdentifier) {
+    toast.error('Unable to determine delivery ID for this assignment.')
+    return
+  }
+
+  pickupInFlight[assignment.id] = true
+  try {
+    await confirmPickup(deliveryIdentifier)
+    pickedUpState[assignment.id] = true
+    toast.success(`Marked assignment #${assignment.id} as picked up`)
+    refresh().catch(() => {})
+  } catch (error: any) {
+    const message = error?.message || 'Failed to confirm pickup. Please try again.'
+    toast.error(message)
+  } finally {
+    pickupInFlight[assignment.id] = false
+  }
+}
+
+async function markDelivered(assignment: AssignmentExtended) {
+  if (deliveryInFlight[assignment.id]) return
+  const deliveryIdentifier = resolveDeliveryIdentifier(assignment)
+  if (!deliveryIdentifier) {
+    toast.error('Unable to determine delivery ID for this assignment.')
+    return
+  }
+
+  deliveryInFlight[assignment.id] = true
+  try {
+    await confirmDelivery(deliveryIdentifier)
+    deliveredState[assignment.id] = true
+    toast.success(`Great job! Assignment #${assignment.id} marked as delivered`)
+    refresh().catch(() => {})
+  } catch (error: any) {
+    const message = error?.message || 'Failed to confirm delivery. Please try again.'
+    toast.error(message)
+  } finally {
+    deliveryInFlight[assignment.id] = false
+  }
 }
 
 function navigateTo(assignment: AssignmentExtended) {
