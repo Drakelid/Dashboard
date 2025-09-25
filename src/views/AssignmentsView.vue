@@ -708,7 +708,7 @@ function resolveDriverCoordinates(entry: DriverDeliveryItem) {
     { lat: e.current_latitude, lng: e.current_longitude },
     { lat: e.vehicle_latitude, lng: e.vehicle_longitude },
   ]
-  return selectCoordinate(candidates) ?? fallbackCoordinate(0)
+  return selectCoordinate(candidates)
 }
 
 function resolvePickupCoordinates(entry: DriverDeliveryItem) {
@@ -719,7 +719,7 @@ function resolvePickupCoordinates(entry: DriverDeliveryItem) {
     { lat: d.pickup_latitude, lng: d.pickup_longitude },
     { lat: e.latitude, lng: e.longitude },
   ]
-  return selectCoordinate(candidates) ?? fallbackCoordinate(0)
+  return selectCoordinate(candidates)
 }
 
 function resolveDropoffCoordinates(entry: DriverDeliveryItem) {
@@ -730,7 +730,7 @@ function resolveDropoffCoordinates(entry: DriverDeliveryItem) {
     { lat: d.delivery_latitude, lng: d.delivery_longitude },
     { lat: e.latitude, lng: e.longitude },
   ]
-  return selectCoordinate(candidates) ?? fallbackCoordinate(0)
+  return selectCoordinate(candidates)
 }
 
 function selectCoordinate(candidates: Array<{ lat?: any; lng?: any }>) {
