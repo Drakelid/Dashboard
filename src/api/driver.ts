@@ -78,29 +78,6 @@ async function getFirstOk<T>(paths: string[], opts?: RequestOptions & { query?: 
   throw lastErr
 }
 
-async function postFirstOk<T>(paths: string[], suffix: string, payload?: any, opts?: RequestOptions): Promise<T> {
-  let lastErr: any
-  for (const base of paths) {
-    const normalized = base.endsWith('/') ? base : base + '/'
-    const target = normalized + suffix.replace(/^\/+/g, '')
-    try {
-      return await http.post<T>(target, payload ?? {}, opts)
-    } catch (e: any) {
-      lastErr = e
-      if (e?.status !== 404) throw e
-      const altBase = normalized.endsWith('/') ? normalized.slice(0, -1) : normalized + '/'
-      const altTarget = altBase + suffix.replace(/^\/+/g, '')
-      try {
-        return await http.post<T>(altTarget, payload ?? {}, opts)
-      } catch (e2: any) {
-        lastErr = e2
-        if (e2?.status !== 404) throw e2
-      }
-    }
-  }
-  throw lastErr
-}
-
 export async function listDeliveries(filter?: 'future' | 'past', opts?: RequestOptions): Promise<DriverDeliveryItem[]> {
   const paths = candidatePaths('deliveries')
   return getFirstOk<DriverDeliveryItem[]>(paths, { ...(opts || {}), query: filter ? { filter } : undefined })
@@ -152,18 +129,4 @@ export interface DriverDeliverySuggestion {
 
 export async function getSuggestions(params?: { limit?: number; radius_km?: number }, opts?: RequestOptions) {
   return http.get<DriverDeliverySuggestion[]>(`/drivers/api/suggestions/`, { ...(opts || {}), query: params as any })
-}
-
-// POST /api/driver/deliveries/{id}/pickup_confirm/
-export async function confirmPickup(deliveryId: string | number) {
-  const paths = candidatePaths('deliveries')
-  const encoded = encodeURIComponent(String(deliveryId))
-  return postFirstOk<{ status: string }>(paths, `${encoded}/pickup_confirm/`)
-}
-
-// POST /api/driver/deliveries/{id}/deliver_confirm/
-export async function confirmDelivery(deliveryId: string | number) {
-  const paths = candidatePaths('deliveries')
-  const encoded = encodeURIComponent(String(deliveryId))
-  return postFirstOk<{ status: string }>(paths, `${encoded}/deliver_confirm/`)
 }

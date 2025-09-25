@@ -318,7 +318,7 @@ import SmallMap from '@/components/SmallMap.vue'
 import AssignmentPackageModal from '@/components/AssignmentPackageModal.vue'
 import CameraScanner from '@/components/CameraScanner.vue'
 import Spinner from '@/components/Spinner.vue'
-import { confirmPickup, confirmDelivery } from '@/api/driver'
+import { pickup as pickupPackage, deliver as deliverPackage } from '@/api/packages'
 import { toast } from '@/utils/toast'
 import { geocodeAddress } from '@/utils/geocode'
 import type { DriverDeliveryItem, Package } from '@/types/api'
@@ -565,24 +565,24 @@ function messageContact(assignment: AssignmentExtended) {
   toast.info(`Starting chat with ${assignment.contactName}`)
 }
 
-function resolveDeliveryIdentifier(assignment: AssignmentExtended): string | number | null {
-  const delivery: any = assignment.original.delivery
-  if (delivery?.id != null) return delivery.id
-  if (delivery?.uuid) return delivery.uuid
-  return assignment.id || null
-}
-
 async function markPickedUp(assignment: AssignmentExtended) {
   if (pickupInFlight[assignment.id]) return
-  const deliveryIdentifier = resolveDeliveryIdentifier(assignment)
-  if (!deliveryIdentifier) {
-    toast.error('Unable to determine delivery ID for this assignment.')
+  const packageIds = assignment.packages.map(pkg => pkg.id).filter((id): id is number => id != null)
+  if (!packageIds.length) {
+    toast.error('No package IDs available for this assignment.')
     return
   }
 
   pickupInFlight[assignment.id] = true
   try {
-    await confirmPickup(deliveryIdentifier)
+    const payload = {
+      success: true,
+      message: 'Marked picked up via driver dashboard',
+      new_status: 'picked_up',
+      new_status_display: 'Picked up',
+      picked_up_at: new Date().toISOString(),
+    }
+    await Promise.all(packageIds.map(id => pickupPackage(id, payload)))
     pickedUpState[assignment.id] = true
     toast.success(`Marked assignment #${assignment.id} as picked up`)
     refresh().catch(() => {})
@@ -596,15 +596,19 @@ async function markPickedUp(assignment: AssignmentExtended) {
 
 async function markDelivered(assignment: AssignmentExtended) {
   if (deliveryInFlight[assignment.id]) return
-  const deliveryIdentifier = resolveDeliveryIdentifier(assignment)
-  if (!deliveryIdentifier) {
-    toast.error('Unable to determine delivery ID for this assignment.')
+  const packageIds = assignment.packages.map(pkg => pkg.id).filter((id): id is number => id != null)
+  if (!packageIds.length) {
+    toast.error('No package IDs available for this assignment.')
     return
   }
 
   deliveryInFlight[assignment.id] = true
   try {
-    await confirmDelivery(deliveryIdentifier)
+    const payload = {
+      delivered_to: assignment.contactName || 'Recipient',
+      delivery_notes: 'Delivery confirmed via driver dashboard',
+    }
+    await Promise.all(packageIds.map(id => deliverPackage(id, payload)))
     deliveredState[assignment.id] = true
     toast.success(`Great job! Assignment #${assignment.id} marked as delivered`)
     refresh().catch(() => {})
