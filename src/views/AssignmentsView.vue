@@ -201,7 +201,7 @@
                       v-if="!assignment.localDelivered"
                       class="h-8 px-3 text-xs rounded-lg border border-emerald-500 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 inline-flex items-center gap-1 w-full sm:w-auto justify-center disabled:opacity-60 disabled:cursor-not-allowed"
                       :disabled="deliveryInFlight[assignment.id]"
-                      @click.stop="markDelivered(assignment)"
+                      @click.stop="startDeliveryConfirmation(assignment)"
                     >
                       <CheckCircle class="w-3.5 h-3.5 text-emerald-600" />
                       {{ deliveryInFlight[assignment.id] ? 'Submitting…' : 'Delivered' }}
@@ -303,7 +303,7 @@
     />
     <CameraScanner
       :open="scannerOpen"
-      @close="scannerOpen = false"
+      @close="handleScannerClose"
       @decoded="handleScanResult"
       @error="handleScanError"
     />
@@ -352,6 +352,8 @@ const timelineFilter = ref<'all' | 'ready' | 'in_transit' | 'needs_action'>('all
 const selectedAssignmentId = ref<string | null>(normalizeFocus(route.query.focus))
 const packageModalOpen = ref(false)
 const scannerOpen = ref(false)
+const scannerMode = ref<'pickup' | 'delivery' | null>(null)
+const scannerAssignment = ref<AssignmentExtended | null>(null)
 const pickedUpState = reactive<Record<string, boolean>>({})
 const deliveredState = reactive<Record<string, boolean>>({})
 const pickupInFlight = reactive<Record<string, boolean>>({})
@@ -545,13 +547,30 @@ function handleSOS() {
 }
 
 function handleScan() {
+  scannerMode.value = 'pickup'
+  scannerAssignment.value = selectedAssignment.value
   scannerOpen.value = true
 }
 
 function handleScanResult(value: string) {
-  scannerOpen.value = false
-  const preview = value.length > 120 ? value.slice(0, 117) + "..." : value
+  if (!scannerAssignment.value || !scannerMode.value) {
+    handleScannerClose()
+    return
+  }
+
+  if (scannerMode.value === 'delivery') {
+    handleDeliveryScan(value, scannerAssignment.value).catch(error => {
+      const message = error?.message || 'Failed to mark delivery. Please try again.'
+      toast.error(message)
+    }).finally(() => {
+      handleScannerClose()
+    })
+    return
+  }
+
+  const preview = value.length > 120 ? value.slice(0, 117) + '...' : value
   toast.success('Scanned: ' + preview)
+  handleScannerClose()
 }
 
 function handleScanError(message: string) {
@@ -622,6 +641,35 @@ async function markDelivered(assignment: AssignmentExtended) {
 
 function navigateTo(assignment: AssignmentExtended) {
   toast.info(`Starting navigation to ${assignment.dropoffLabel}`)
+}
+
+function startDeliveryConfirmation(assignment: AssignmentExtended) {
+  scannerAssignment.value = assignment
+  scannerMode.value = 'delivery'
+  scannerOpen.value = true
+}
+
+function handleScannerClose() {
+  scannerOpen.value = false
+  scannerMode.value = null
+  scannerAssignment.value = null
+}
+
+async function handleDeliveryScan(code: string, assignment: AssignmentExtended) {
+  const normalizedCode = code.trim()
+  const packageIds = assignment.packages.map(pkg => pkg.id).filter((id): id is number => id != null)
+  if (!packageIds.length) {
+    toast.error('No package IDs available for this assignment.')
+    return
+  }
+
+  const matchingIds = packageIds.filter(id => String(id) === normalizedCode || normalizedCode.endsWith(String(id)))
+  if (!matchingIds.length) {
+    toast.error('Scanned label does not match this assignment. Please try again.')
+    return
+  }
+
+  await markDelivered(assignment)
 }
 
 function openPackageModal(assignment: AssignmentExtended) {
