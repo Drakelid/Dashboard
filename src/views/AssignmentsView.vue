@@ -76,6 +76,7 @@
           </div>
           <p class="text-xs text-gray-500 mt-1">{{ metric.caption }}</p>
         </div>
+      </div>
     </section>
 
     <!-- Route Overview Bar -->
