@@ -363,10 +363,10 @@ const assignmentCoords = reactive<Record<string, { lat: number; lng: number }>>(
 const pendingGeocodes = new Set<string>()
 const pickupCoordsCache = reactive<Record<string, { lat: number; lng: number } | null>>({})
 const dropoffCoordsCache = reactive<Record<string, { lat: number; lng: number } | null>>({})
-const pendingPickupGeocodes = new Set<string>()
-const pendingDropoffGeocodes = new Set<string>()
+const pendingPickupPromises = new Map<string, Promise<{ lat: number; lng: number } | null>>()
+const pendingDropoffPromises = new Map<string, Promise<{ lat: number; lng: number } | null>>()
+const pendingDistancePromises = new Map<string, Promise<void>>()
 const routeDistances = reactive<Record<string, number | null>>({})
-const pendingRoutes = new Set<string>()
 
 onMounted(() => {
   if (!future.value) {
@@ -528,29 +528,22 @@ function selectAssignment(id: string) {
 
 function getRouteDistanceKm(
   id: string,
+  entry: DriverDeliveryItem,
   pickupCoords: { lat: number; lng: number } | null,
   dropoffCoords: { lat: number; lng: number } | null
 ) {
   const stored = routeDistances[id]
   if (stored != null) return stored
-  if (pickupCoords && dropoffCoords && !pendingRoutes.has(id)) {
-    pendingRoutes.add(id)
-    fetchRouteDistance(id, pickupCoords, dropoffCoords).finally(() => pendingRoutes.delete(id))
-  }
-  return pickupCoords && dropoffCoords ? distanceBetween(pickupCoords, dropoffCoords) : null
-}
 
-async function fetchRouteDistance(
-  id: string,
-  pickupCoords: { lat: number; lng: number },
-  dropoffCoords: { lat: number; lng: number }
-) {
-  const distanceKm = await getDrivingDistance(pickupCoords, dropoffCoords)
-  if (distanceKm != null) {
-    routeDistances[id] = distanceKm
-  } else if (routeDistances[id] == null) {
-    routeDistances[id] = distanceBetween(pickupCoords, dropoffCoords)
+  if (!pendingDistancePromises.has(id)) {
+    const promise = ensureRouteDistance(id, entry).finally(() => pendingDistancePromises.delete(id))
+    pendingDistancePromises.set(id, promise)
   }
+
+  if (pickupCoords && dropoffCoords) return distanceBetween(pickupCoords, dropoffCoords)
+  if (pickupCoords && assignmentCoords[id]) return distanceBetween(pickupCoords, assignmentCoords[id])
+  if (dropoffCoords && assignmentCoords[id]) return distanceBetween(dropoffCoords, assignmentCoords[id])
+  return null
 }
 
 function updateFocusQuery(id: string | null) {
