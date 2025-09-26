@@ -231,7 +231,7 @@
                             @click.stop="startPickupScan(assignment)"
                           >
                             <QrCode class="w-3.5 h-3.5" />
-                            {{ pickupInFlight[assignment.id] ? 'Confirming' : 'Scan pickup' }}
+                            {{ pickupInFlight[assignment.id] ? 'Confirming' : 'Picked up' }}
                           </button>
                         </div>
                       </template>
@@ -1340,6 +1340,7 @@ type TimelineEvent = {
 
 type TaskPriority = 'urgent' | 'express' | 'standard'
 </script>
+
 
 
 
