@@ -37,19 +37,16 @@
           <RouterView />
         </main>
       </div>
-    </div>
   </div>
   <!-- Mobile navigation drawer removed; use /menu route instead -->
   <CommandPalette
     v-model="isPaletteOpen"
     :commands="commandItems"
-{{ ... }}
+    :initial-query="paletteInitialQuery"
     @run="onCommandRun"
   />
   <ToastHost />
 </template>
-
-<script setup lang="ts">
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import SidebarNav from '@/components/SidebarNav.vue'
