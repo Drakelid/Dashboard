@@ -774,7 +774,12 @@ async function navigateTo(assignment: AssignmentExtended) {
 
   let driverCoords = assignment.driverCoordinates ?? resolveDriverCoordinates(assignment.original)
   if (!driverCoords) {
-    driverCoords = assignment.coordinates || assignmentCoords[assignment.id] || null
+    let pickupCoords = assignment.pickupCoordinates ?? resolvePickupCoordinates(assignment.id, assignment.original)
+    if (!pickupCoords) {
+      pickupCoords = await ensurePickupCoordinates(assignment.id, assignment.original)
+    }
+    driverCoords = pickupCoords ?? assignment.coordinates ?? assignmentCoords[assignment.id] ?? null
+    if (pickupCoords) assignment.pickupCoordinates = pickupCoords
   }
 
   let dropoffCoords = assignment.dropoffCoordinates ?? resolveDropoffCoordinates(assignment.id, assignment.original)
@@ -804,8 +809,10 @@ async function navigateTo(assignment: AssignmentExtended) {
     travelmode: 'driving',
   })
   const url = `https://www.google.com/maps/dir/?${params.toString()}`
-  const newWindow = window.open(url, '_blank', 'noopener')
-  if (!newWindow) {
+  const newWindow = window.open('about:blank', '_blank', 'noopener,noreferrer')
+  if (newWindow) {
+    newWindow.location.href = url
+  } else {
     window.location.href = url
   }
 }
@@ -906,6 +913,7 @@ function enrichAssignment(entry: DriverDeliveryItem, index: number): AssignmentE
     distanceLabel: localDelivered ? 'Delivered' : travelDistanceLabel || (effectiveStatus === 'ready' ? pickupDistanceLabel : dropoffDistanceLabel) || 'Distance TBD',
     pickupDistanceLabel: pickupDistanceLabel || 'Distance TBD',
     dropoffDistanceLabel: localDelivered ? 'Delivered' : dropoffDistanceLabel || 'Distance TBD',
+    pickupCoordinates: pickupCoords,
     driverCoordinates: driverCoords,
     dropoffCoordinates: dropoffCoords,
     pickupWindow,
