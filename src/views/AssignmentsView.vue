@@ -766,22 +766,48 @@ async function markDelivered(assignment: AssignmentExtended) {
   }
 }
 
-function navigateTo(assignment: AssignmentExtended) {
-  if (assignment.status === 'in_transit' && assignment.driverCoordinates && assignment.dropoffCoordinates) {
-    const origin = `${assignment.driverCoordinates.lat},${assignment.driverCoordinates.lng}`
-    const destination = `${assignment.dropoffCoordinates.lat},${assignment.dropoffCoordinates.lng}`
-    const params = new URLSearchParams({
-      api: '1',
-      origin,
-      destination,
-      travelmode: 'driving',
-    })
-    const url = `https://www.google.com/maps/dir/?${params.toString()}`
-    window.open(url, '_blank', 'noopener')
+async function navigateTo(assignment: AssignmentExtended) {
+  if (assignment.status !== 'in_transit') {
+    toast.info('Navigation is available once the assignment is in transit.')
     return
   }
 
-  toast.info(`Starting navigation to ${assignment.dropoffLabel}`)
+  let driverCoords = assignment.driverCoordinates ?? resolveDriverCoordinates(assignment.original)
+  if (!driverCoords) {
+    driverCoords = assignment.coordinates || assignmentCoords[assignment.id] || null
+  }
+
+  let dropoffCoords = assignment.dropoffCoordinates ?? resolveDropoffCoordinates(assignment.id, assignment.original)
+  if (!dropoffCoords) {
+    dropoffCoords = await ensureDropoffCoordinates(assignment.id, assignment.original)
+  }
+
+  if (!dropoffCoords) {
+    toast.error('Unable to determine drop-off location for navigation.')
+    return
+  }
+
+  if (!driverCoords) {
+    toast.error('Driver location is unavailable. Update location and try again.')
+    return
+  }
+
+  assignment.driverCoordinates = driverCoords
+  assignment.dropoffCoordinates = dropoffCoords
+
+  const origin = `${driverCoords.lat},${driverCoords.lng}`
+  const destination = `${dropoffCoords.lat},${dropoffCoords.lng}`
+  const params = new URLSearchParams({
+    api: '1',
+    origin,
+    destination,
+    travelmode: 'driving',
+  })
+  const url = `https://www.google.com/maps/dir/?${params.toString()}`
+  const newWindow = window.open(url, '_blank', 'noopener')
+  if (!newWindow) {
+    window.location.href = url
+  }
 }
 
 function startDeliveryConfirmation(assignment: AssignmentExtended) {
