@@ -12,7 +12,7 @@
         <!-- Content Header -->
         <header class="sticky top-0 z-40 glass-effect border-b border-gray-200/60">
           <div class="flex h-16 items-center justify-between px-4 md:px-6 gap-4">
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-3">
               <button type="button" @click="toggleMenuRoute" class="md:hidden relative h-11 w-11 tap-target rounded-full border border-gray-200 bg-white hover:bg-gray-50 leading-[0] p-0" aria-label="Toggle navigation menu">
                 <Menu class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 text-gray-700" />
               </button>
@@ -22,31 +22,13 @@
                 <span class="font-medium text-gray-900">{{ currentTitle }}</span>
               </div>
             </div>
-            <div class="flex items-center gap-3 flex-1 md:flex-none md:w-[520px]">
-              <div class="flex-1">
-                <div class="relative">
-                  <input
-                    ref="searchActivator"
-                    type="search"
-                    aria-label="Open command palette"
-                    class="w-full h-9 pl-3 pr-10 rounded-lg border bg-white placeholder:text-gray-400 text-sm cursor-pointer"
-                    placeholder="Search deliveries, customers… (⌘K)"
-                    readonly
-                    @focus="openPalette()"
-                    @click.prevent="openPalette()"
-                    @keydown="handleSearchKeydown"
-                  />
-                  <span class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400">⌘K</span>
-                </div>
-              </div>
-              <div class="hidden md:flex items-center gap-2">
-                <span class="px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs">Online</span>
-                <button class="relative h-9 w-9 tap-target rounded-full border bg-white hover:bg-gray-50">
-                  <Bell class="w-4 h-4 text-gray-700" />
-                  <span class="absolute -top-1 -right-1 h-5 min-w-[1.25rem] px-1 rounded-full bg-red-500 text-white text-xs grid place-items-center">3</span>
-                </button>
-                <div class="h-9 w-9 rounded-full bg-gray-200 grid place-items-center text-sm font-medium">J</div>
-              </div>
+            <div class="hidden md:flex items-center gap-2 ml-auto">
+              <span class="px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs">Online</span>
+              <button class="relative h-9 w-9 tap-target rounded-full border bg-white hover:bg-gray-50">
+                <Bell class="w-4 h-4 text-gray-700" />
+                <span class="absolute -top-1 -right-1 h-5 min-w-[1.25rem] px-1 rounded-full bg-red-500 text-white text-xs grid place-items-center">3</span>
+              </button>
+              <div class="h-9 w-9 rounded-full bg-gray-200 grid place-items-center text-sm font-medium">J</div>
             </div>
           </div>
         </header>
@@ -55,7 +37,6 @@
           <RouterView />
         </main>
       </div>
-    </div>
   </div>
   <!-- Mobile navigation drawer removed; use /menu route instead -->
   <CommandPalette
@@ -83,7 +64,6 @@ import type { DriverDeliveryItem } from '@/types/api'
 const isDev = import.meta.env.DEV
 const route = useRoute()
 const router = useRouter()
-const searchActivator = ref<HTMLInputElement | null>(null)
 const isPaletteOpen = ref(false)
 const paletteInitialQuery = ref('')
 
@@ -106,13 +86,6 @@ function toggleMenuRoute() {
 function openPalette(initial = '') {
   paletteInitialQuery.value = initial
   isPaletteOpen.value = true
-}
-
-function handleSearchKeydown(event: KeyboardEvent) {
-  if (event.key === 'Tab') return
-  event.preventDefault()
-  const initial = event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey ? event.key : ''
-  openPalette(initial)
 }
 
 function handleGlobalShortcut(event: KeyboardEvent) {
