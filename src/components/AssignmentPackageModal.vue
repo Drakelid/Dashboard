@@ -19,35 +19,35 @@
               <div class="flex flex-wrap items-center gap-2 sm:justify-end">
                 <span
                   v-if="packageSummary.total"
-                  class="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-medium tracking-wide shadow-sm backdrop-blur-sm"
+                  class="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-medium tracking-wide backdrop-blur-sm"
                 >
                   <PackageIcon class="w-4 h-4" />
                   {{ packageSummary.total }} {{ packageSummary.total === 1 ? 'package' : 'packages' }}
                 </span>
                 <span
                   v-if="packageSummary.hasWeight"
-                  class="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-medium tracking-wide shadow-sm backdrop-blur-sm"
+                  class="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-medium tracking-wide backdrop-blur-sm"
                 >
                   <Weight class="w-4 h-4" />
                   {{ packageSummary.weightLabel }}
                 </span>
                 <span
                   v-if="packageSummary.fragile"
-                  class="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-medium tracking-wide shadow-sm backdrop-blur-sm"
+                  class="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-medium tracking-wide backdrop-blur-sm"
                 >
                   <AlertTriangle class="w-4 h-4" />
                   {{ packageSummary.fragile }} fragile
                 </span>
                 <span
                   v-if="packageSummary.hazardous"
-                  class="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-medium tracking-wide shadow-sm backdrop-blur-sm"
+                  class="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-medium tracking-wide backdrop-blur-sm"
                 >
                   <ShieldAlert class="w-4 h-4" />
                   {{ packageSummary.hazardous }} hazardous
                 </span>
                 <span
                   v-if="packageSummary.temperatureSensitive"
-                  class="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-medium tracking-wide shadow-sm backdrop-blur-sm"
+                  class="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-medium tracking-wide backdrop-blur-sm"
                 >
                   <ThermometerSun class="w-4 h-4" />
                   {{ packageSummary.temperatureSensitive }} temp sensitive
@@ -74,7 +74,7 @@
               <article
                 v-for="pkg in packageList"
                 :key="pkg.id ?? pkg.description"
-                class="rounded-2xl border border-slate-200 bg-white/95 shadow-sm px-5 py-5 space-y-5 backdrop-blur-sm"
+                class="rounded-2xl border border-slate-200 bg-white/95 px-5 py-5 space-y-5 backdrop-blur-sm"
               >
                 <header class="flex flex-wrap items-start justify-between gap-4">
                   <div class="flex items-start gap-3">
@@ -147,7 +147,7 @@
                     <span
                       v-for="tag in handlingTags(pkg)"
                       :key="tag.label"
-                      class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-medium shadow-sm"
+                      class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-medium"
                       :class="tag.class"
                     >
                       <component :is="tag.icon" class="w-3.5 h-3.5" />
