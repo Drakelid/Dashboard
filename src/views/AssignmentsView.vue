@@ -202,7 +202,7 @@
                       </div>
                     </div>
 
-                    <div class="flex flex-wrap items-center gap-2">
+                    <div class="flex flex-wrap items-center" :class="assignment.status === 'ready' ? 'gap-0 sm:gap-0' : 'gap-2'">
                       <button
                         class="h-9 px-3 text-xs rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-1 w-full sm:w-auto justify-center"
                         @click.stop="callContact(assignment)"
@@ -1304,3 +1304,4 @@ type TimelineEvent = {
 
 type TaskPriority = 'urgent' | 'express' | 'standard'
 </script>
+
