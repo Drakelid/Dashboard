@@ -785,30 +785,43 @@ async function markDelivered(assignment: AssignmentExtended) {
 }
 
 async function navigateTo(assignment: AssignmentExtended) {
-  if (assignment.status !== 'in_transit') {
-    toast.info('Navigation is available once the assignment is in transit.')
+  const status = assignment.status
+  if (status !== 'ready' && status !== 'in_transit') {
+    toast.info('Navigation is available for assignments that are ready for pickup or in transit.')
     return
   }
 
   const liveCoords = await getBrowserPosition()
   let driverCoords = liveCoords ?? assignment.driverCoordinates ?? resolveDriverCoordinates(assignment.original)
+
+  let pickupCoords = assignment.pickupCoordinates ?? resolvePickupCoordinates(assignment.id, assignment.original)
+  if (!pickupCoords) {
+    pickupCoords = await ensurePickupCoordinates(assignment.id, assignment.original)
+  }
+  if (pickupCoords) assignment.pickupCoordinates = pickupCoords
+
   if (!driverCoords) {
-    let pickupCoords = assignment.pickupCoordinates ?? resolvePickupCoordinates(assignment.id, assignment.original)
-    if (!pickupCoords) {
-      pickupCoords = await ensurePickupCoordinates(assignment.id, assignment.original)
-    }
     driverCoords = pickupCoords ?? assignment.coordinates ?? assignmentCoords[assignment.id] ?? null
-    if (pickupCoords) assignment.pickupCoordinates = pickupCoords
   }
 
-  let dropoffCoords = assignment.dropoffCoordinates ?? resolveDropoffCoordinates(assignment.id, assignment.original)
-  if (!dropoffCoords) {
-    dropoffCoords = await ensureDropoffCoordinates(assignment.id, assignment.original)
-  }
-
-  if (!dropoffCoords) {
-    toast.error('Unable to determine drop-off location for navigation.')
-    return
+  let destination: { lat: number; lng: number } | null = null
+  if (status === 'ready') {
+    if (!pickupCoords) {
+      toast.error('Unable to determine pickup location for navigation.')
+      return
+    }
+    destination = pickupCoords
+  } else {
+    let dropoffCoords = assignment.dropoffCoordinates ?? resolveDropoffCoordinates(assignment.id, assignment.original)
+    if (!dropoffCoords) {
+      dropoffCoords = await ensureDropoffCoordinates(assignment.id, assignment.original)
+    }
+    if (!dropoffCoords) {
+      toast.error('Unable to determine drop-off location for navigation.')
+      return
+    }
+    destination = dropoffCoords
+    assignment.dropoffCoordinates = dropoffCoords
   }
 
   if (!driverCoords) {
@@ -818,14 +831,13 @@ async function navigateTo(assignment: AssignmentExtended) {
 
   if (liveCoords) assignment.browserCoordinates = liveCoords
   assignment.driverCoordinates = driverCoords
-  assignment.dropoffCoordinates = dropoffCoords
 
   const origin = `${driverCoords.lat},${driverCoords.lng}`
-  const destination = `${dropoffCoords.lat},${dropoffCoords.lng}`
+  const destinationParam = `${destination.lat},${destination.lng}`
   const params = new URLSearchParams({
     api: '1',
     origin,
-    destination,
+    destination: destinationParam,
     travelmode: 'driving',
   })
   const url = `https://www.google.com/maps/dir/?${params.toString()}`
