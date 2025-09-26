@@ -767,6 +767,20 @@ async function markDelivered(assignment: AssignmentExtended) {
 }
 
 function navigateTo(assignment: AssignmentExtended) {
+  if (assignment.status === 'in_transit' && assignment.driverCoordinates && assignment.dropoffCoordinates) {
+    const origin = `${assignment.driverCoordinates.lat},${assignment.driverCoordinates.lng}`
+    const destination = `${assignment.dropoffCoordinates.lat},${assignment.dropoffCoordinates.lng}`
+    const params = new URLSearchParams({
+      api: '1',
+      origin,
+      destination,
+      travelmode: 'driving',
+    })
+    const url = `https://www.google.com/maps/dir/?${params.toString()}`
+    window.open(url, '_blank', 'noopener')
+    return
+  }
+
   toast.info(`Starting navigation to ${assignment.dropoffLabel}`)
 }
 
@@ -866,6 +880,8 @@ function enrichAssignment(entry: DriverDeliveryItem, index: number): AssignmentE
     distanceLabel: localDelivered ? 'Delivered' : travelDistanceLabel || (effectiveStatus === 'ready' ? pickupDistanceLabel : dropoffDistanceLabel) || 'Distance TBD',
     pickupDistanceLabel: pickupDistanceLabel || 'Distance TBD',
     dropoffDistanceLabel: localDelivered ? 'Delivered' : dropoffDistanceLabel || 'Distance TBD',
+    driverCoordinates: driverCoords,
+    dropoffCoordinates: dropoffCoords,
     pickupWindow,
     contactName: entry.delivery?.receiver?.name || entry.actor?.name || 'Recipient',
     contactPhone: entry.delivery?.receiver?.phone || entry.actor?.phone || 'N/A',
@@ -1185,6 +1201,8 @@ interface AssignmentExtended {
   distanceLabel: string
   pickupDistanceLabel: string
   dropoffDistanceLabel: string
+  driverCoordinates: { lat: number; lng: number } | null
+  dropoffCoordinates: { lat: number; lng: number } | null
   pickupWindow: string
   contactName: string
   contactPhone: string
