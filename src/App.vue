@@ -37,12 +37,13 @@
           <RouterView />
         </main>
       </div>
+    </div>
   </div>
   <!-- Mobile navigation drawer removed; use /menu route instead -->
   <CommandPalette
     v-model="isPaletteOpen"
     :commands="commandItems"
-    :initial-query="paletteInitialQuery"
+{{ ... }}
     @run="onCommandRun"
   />
   <ToastHost />
