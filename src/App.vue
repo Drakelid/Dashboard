@@ -48,6 +48,7 @@
   />
   <ToastHost />
 </template>
+<script setup lang="ts">
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import SidebarNav from '@/components/SidebarNav.vue'
