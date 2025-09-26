@@ -250,7 +250,7 @@
                           @click.stop="startDeliveryConfirmation(assignment)"
                         >
                           <CheckCircle class="w-3.5 h-3.5 text-emerald-600" />
-                          {{ deliveryInFlight[assignment.id] ? 'Submitting…' : 'Delivered' }}
+                          {{ deliveryInFlight[assignment.id] ? 'Submitting...' : 'Delivered' }}
                         </button>
                       </template>
                       <button
@@ -269,15 +269,6 @@
                         <Navigation class="w-3.5 h-3.5" />
                         Navigate
                       </button>
-                    </div>
-                      <button
-                        class="h-9 px-3 text-xs rounded-lg bg-blue-600 text-white hover:bg-blue-700 inline-flex items-center gap-1 w-full sm:w-auto justify-center"
-                        @click.stop="navigateTo(assignment)"
-                      >
-                        <Navigation class="w-3.5 h-3.5" />
-                        Navigate
-                      </button>
-                    </div>
                     </div>
                   </div>
                 </article>
@@ -392,15 +383,18 @@ import type { DriverDeliveryItem, Package } from '@/types/api'
 import {
   Check,
   CheckCircle,
+  ClipboardCheck,
   ClipboardList,
   Clock,
   AlertTriangle,
+  BadgeDollarSign,
   Map as MapIcon,
   MapPin,
   MessageSquare,
   Navigation,
   Package as PackageIcon,
   Phone,
+  QrCode,
   Scan,
   ShieldAlert,
   ToggleLeft,
