@@ -292,6 +292,17 @@ const mapMarkers = computed(() => {
   return markers
 })
 
+function isAssignableStatus(status: unknown): boolean {
+  if (status == null) return true
+  const value = String(status).toLowerCase()
+  if (value.includes('delivered')) return false
+  if (value.includes('picked_up')) return false
+  if (value.includes('cancel')) return false
+  if (value.includes('return')) return false
+  if (value.includes('completed')) return false
+  return true
+}
+
 async function loadNearby() {
   nearbyLoading.value = true
   nearbyError.value = null
@@ -306,7 +317,7 @@ async function loadNearby() {
       const lat = typeof rawLat === 'string' ? parseFloat(rawLat) : (typeof rawLat === 'number' ? rawLat : undefined)
       const lng = typeof rawLng === 'string' ? parseFloat(rawLng) : (typeof rawLng === 'number' ? rawLng : undefined)
       const readyPackages = (g.packages || [])
-        .filter(p => String((p as any).delivery_status || '').toLowerCase() === 'ready_for_pickup')
+        .filter(p => isAssignableStatus((p as any).delivery_status))
         .map(p => ({
           id: p.id,
           description: p.description,
