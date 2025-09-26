@@ -37,6 +37,7 @@
           <RouterView />
         </main>
       </div>
+    </div>
   </div>
   <!-- Mobile navigation drawer removed; use /menu route instead -->
   <CommandPalette
