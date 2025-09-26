@@ -263,24 +263,22 @@
                           {{ deliveryInFlight[assignment.id] ? 'Submitting...' : 'Delivered' }}
                         </button>
                       </template>
-                      <div class="flex w-full sm:w-auto flex-col">
-                        <button
-                          v-if="assignment.status !== 'in_transit' && !assignment.localPicked"
-                          class="h-9 px-3 text-xs rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 inline-flex items-center gap-1 w-full justify-center disabled:opacity-60 disabled:cursor-not-allowed"
-                          :disabled="pickupInFlight[assignment.id]"
-                          @click.stop="markPickedUp(assignment)"
-                        >
-                          <ClipboardCheck class="w-3.5 h-3.5" />
-                          {{ pickupInFlight[assignment.id] ? 'Confirming' : 'Mark picked up' }}
-                        </button>
-                        <button
-                          class="h-9 px-3 text-xs rounded-lg bg-blue-600 text-white hover:bg-blue-700 inline-flex items-center gap-1 w-full justify-center"
-                          @click.stop="navigateTo(assignment)"
-                        >
-                          <Navigation class="w-3.5 h-3.5" />
-                          Navigate
-                        </button>
-                      </div>
+                      <button
+                        v-if="assignment.status !== 'in_transit' && !assignment.localPicked && assignment.status !== 'ready'"
+                        class="h-9 px-3 text-xs rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 inline-flex items-center gap-1 w-full sm:w-auto justify-center disabled:opacity-60 disabled:cursor-not-allowed"
+                        :disabled="pickupInFlight[assignment.id]"
+                        @click.stop="markPickedUp(assignment)"
+                      >
+                        <ClipboardCheck class="w-3.5 h-3.5" />
+                        {{ pickupInFlight[assignment.id] ? 'Confirming' : 'Mark picked up' }}
+                      </button>
+                      <button
+                        class="h-9 px-3 text-xs rounded-lg bg-blue-600 text-white hover:bg-blue-700 inline-flex items-center gap-1 w-full sm:w-auto justify-center"
+                        @click.stop="navigateTo(assignment)"
+                      >
+                        <Navigation class="w-3.5 h-3.5" />
+                        Navigate
+                      </button>
                     </div>
                   </div>
                 </article>
