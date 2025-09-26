@@ -711,6 +711,24 @@ function messageContact(assignment: AssignmentExtended) {
   toast.info(`Starting chat with ${assignment.contactName}`)
 }
 
+async function getBrowserPosition(): Promise<{ lat: number; lng: number } | null> {
+  if (typeof navigator === 'undefined' || !navigator.geolocation) return null
+
+  return new Promise(resolve => {
+    try {
+      navigator.geolocation.getCurrentPosition(
+        position => {
+          resolve({ lat: position.coords.latitude, lng: position.coords.longitude })
+        },
+        () => resolve(null),
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+      )
+    } catch {
+      resolve(null)
+    }
+  })
+}
+
 async function markPickedUp(assignment: AssignmentExtended) {
   if (pickupInFlight[assignment.id]) return
   const packageIds = assignment.packages.map(pkg => pkg.id).filter((id): id is number => id != null)
@@ -772,7 +790,8 @@ async function navigateTo(assignment: AssignmentExtended) {
     return
   }
 
-  let driverCoords = assignment.driverCoordinates ?? resolveDriverCoordinates(assignment.original)
+  const liveCoords = await getBrowserPosition()
+  let driverCoords = liveCoords ?? assignment.driverCoordinates ?? resolveDriverCoordinates(assignment.original)
   if (!driverCoords) {
     let pickupCoords = assignment.pickupCoordinates ?? resolvePickupCoordinates(assignment.id, assignment.original)
     if (!pickupCoords) {
@@ -797,6 +816,7 @@ async function navigateTo(assignment: AssignmentExtended) {
     return
   }
 
+  if (liveCoords) assignment.browserCoordinates = liveCoords
   assignment.driverCoordinates = driverCoords
   assignment.dropoffCoordinates = dropoffCoords
 
@@ -912,6 +932,7 @@ function enrichAssignment(entry: DriverDeliveryItem, index: number): AssignmentE
     pickupDistanceLabel: pickupDistanceLabel || 'Distance TBD',
     dropoffDistanceLabel: localDelivered ? 'Delivered' : dropoffDistanceLabel || 'Distance TBD',
     pickupCoordinates: pickupCoords,
+    browserCoordinates: null,
     driverCoordinates: driverCoords,
     dropoffCoordinates: dropoffCoords,
     pickupWindow,
@@ -1232,6 +1253,8 @@ interface AssignmentExtended {
   timeLabel: string
   distanceLabel: string
   pickupDistanceLabel: string
+  pickupCoordinates: { lat: number; lng: number } | null
+  browserCoordinates: { lat: number; lng: number } | null
   dropoffDistanceLabel: string
   driverCoordinates: { lat: number; lng: number } | null
   dropoffCoordinates: { lat: number; lng: number } | null
