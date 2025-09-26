@@ -205,7 +205,10 @@
                       </div>
                     </div>
 
-                    <div class="flex flex-wrap items-center" :class="assignment.status === 'ready' ? 'gap-0 sm:gap-0' : 'gap-2'">
+                    <div
+                      class="flex flex-wrap items-center"
+                      :class="assignment.status === 'ready' ? 'gap-0 sm:gap-0' : 'gap-2'"
+                    >
                       <button
                         class="h-9 px-3 text-xs rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-1 w-full sm:w-auto justify-center"
                         @click.stop="callContact(assignment)"
@@ -213,13 +216,43 @@
                         <Phone class="w-3.5 h-3.5" />
                         Call
                       </button>
-                      <button
-                        class="h-9 px-3 text-xs rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-1 w-full sm:w-auto justify-center"
-                        @click.stop="messageContact(assignment)"
-                      >
-                        <MessageSquare class="w-3.5 h-3.5" />
-                        Message
-                      </button>
+                      <template v-if="assignment.status === 'ready' && !assignment.localDelivered">
+                        <div class="inline-flex w-full sm:w-auto">
+                          <button
+                            class="h-9 px-3 text-xs rounded-l-lg border border-r-0 bg-white hover:bg-gray-50 inline-flex items-center gap-1 flex-1 sm:flex-none justify-center"
+                            @click.stop="messageContact(assignment)"
+                          >
+                            <MessageSquare class="w-3.5 h-3.5" />
+                            Message
+                          </button>
+                          <button
+                            class="h-9 px-3 text-xs rounded-r-lg border border-emerald-500 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 inline-flex items-center gap-1 flex-1 sm:flex-none justify-center disabled:opacity-60 disabled:cursor-not-allowed"
+                            :disabled="pickupInFlight[assignment.id]"
+                            @click.stop="startPickupScan(assignment)"
+                          >
+                            <QrCode class="w-3.5 h-3.5" />
+                            {{ pickupInFlight[assignment.id] ? 'Confirming' : 'Scan pickup' }}
+                          </button>
+                        </div>
+                      </template>
+                      <template v-else>
+                        <button
+                          class="h-9 px-3 text-xs rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-1 w-full sm:w-auto justify-center"
+                          @click.stop="messageContact(assignment)"
+                        >
+                          <MessageSquare class="w-3.5 h-3.5" />
+                          Message
+                        </button>
+                        <button
+                          v-if="!assignment.localDelivered"
+                          class="h-9 px-3 text-xs rounded-lg border border-emerald-500 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 inline-flex items-center gap-1 w-full sm:w-auto justify-center disabled:opacity-60 disabled:cursor-not-allowed"
+                          :disabled="deliveryInFlight[assignment.id]"
+                          @click.stop="startDeliveryConfirmation(assignment)"
+                        >
+                          <CheckCircle class="w-3.5 h-3.5 text-emerald-600" />
+                          {{ deliveryInFlight[assignment.id] ? 'Submitting�' : 'Delivered' }}
+                        </button>
+                      </template>
                       <button
                         v-if="assignment.status !== 'in_transit' && !assignment.localPicked"
                         class="h-9 px-3 text-xs rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 inline-flex items-center gap-1 w-full sm:w-auto justify-center disabled:opacity-60 disabled:cursor-not-allowed"
@@ -227,16 +260,7 @@
                         @click.stop="markPickedUp(assignment)"
                       >
                         <ClipboardCheck class="w-3.5 h-3.5" />
-                        {{ pickupInFlight[assignment.id] ? 'Confirming…' : 'Mark picked up' }}
-                      </button>
-                      <button
-                        v-if="!assignment.localDelivered"
-                        class="h-9 px-3 text-xs rounded-lg border border-emerald-500 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 inline-flex items-center gap-1 w-full sm:w-auto justify-center disabled:opacity-60 disabled:cursor-not-allowed"
-                        :disabled="deliveryInFlight[assignment.id]"
-                        @click.stop="startDeliveryConfirmation(assignment)"
-                      >
-                        <CheckCircle class="w-3.5 h-3.5 text-emerald-600" />
-                        {{ deliveryInFlight[assignment.id] ? 'Submitting…' : 'Delivered' }}
+                        {{ pickupInFlight[assignment.id] ? 'Confirming' : 'Mark picked up' }}
                       </button>
                       <button
                         class="h-9 px-3 text-xs rounded-lg bg-blue-600 text-white hover:bg-blue-700 inline-flex items-center gap-1 w-full sm:w-auto justify-center"
@@ -245,6 +269,15 @@
                         <Navigation class="w-3.5 h-3.5" />
                         Navigate
                       </button>
+                    </div>
+                      <button
+                        class="h-9 px-3 text-xs rounded-lg bg-blue-600 text-white hover:bg-blue-700 inline-flex items-center gap-1 w-full sm:w-auto justify-center"
+                        @click.stop="navigateTo(assignment)"
+                      >
+                        <Navigation class="w-3.5 h-3.5" />
+                        Navigate
+                      </button>
+                    </div>
                     </div>
                   </div>
                 </article>
@@ -1307,5 +1340,7 @@ type TimelineEvent = {
 
 type TaskPriority = 'urgent' | 'express' | 'standard'
 </script>
+
+
 
 
