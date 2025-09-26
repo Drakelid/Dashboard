@@ -168,7 +168,10 @@
                             {{ assignment.status === 'in_transit' ? 'In transit' : 'Ready for pickup' }}
                           </span>
                         </div>
-                        <button class="text-xs text-blue-600 hover:underline" @click.stop="openPackageModal(assignment)">View package details</button>
+                        <button class="h-8 px-3 text-xs font-medium inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 shadow-sm" @click.stop="openPackageModal(assignment)">
+                          <PackageIcon class="w-3.5 h-3.5" />
+                          View package details
+                        </button>
                       </div>
                     </div>
 
@@ -1304,4 +1307,5 @@ type TimelineEvent = {
 
 type TaskPriority = 'urgent' | 'express' | 'standard'
 </script>
+
 
