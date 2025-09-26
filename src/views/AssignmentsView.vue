@@ -809,11 +809,9 @@ async function navigateTo(assignment: AssignmentExtended) {
     travelmode: 'driving',
   })
   const url = `https://www.google.com/maps/dir/?${params.toString()}`
-  const newWindow = window.open('about:blank', '_blank', 'noopener,noreferrer')
-  if (newWindow) {
-    newWindow.location.href = url
-  } else {
-    window.location.href = url
+  const newWindow = window.open(url, '_blank', 'noopener,noreferrer')
+  if (!newWindow) {
+    toast.error('Please allow pop-ups to open navigation in a new tab.')
   }
 }
 
