@@ -206,27 +206,28 @@
                     </div>
 
                     <div
-                      class="flex flex-wrap items-center"
-                      :class="assignment.status === 'ready' ? 'gap-0 sm:gap-0' : 'gap-2'"
+                      class="flex flex-wrap items-center gap-2"
                     >
-                      <button
-                        class="h-9 px-3 text-xs rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-1 w-full sm:w-auto justify-center"
-                        @click.stop="callContact(assignment)"
-                      >
-                        <Phone class="w-3.5 h-3.5" />
-                        Call
-                      </button>
                       <template v-if="assignment.status === 'ready' && !assignment.localDelivered">
-                        <div class="inline-flex w-full sm:w-auto">
+                        <div class="inline-flex w-full sm:w-auto gap-2">
                           <button
-                            class="h-9 px-3 text-xs rounded-l-lg border border-r-0 bg-white hover:bg-gray-50 inline-flex items-center gap-1 flex-1 sm:flex-none justify-center"
+                            class="h-9 px-3 text-xs rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-1 flex-1 sm:flex-none justify-center"
+                            @click.stop="callContact(assignment)"
+                          >
+                            <Phone class="w-3.5 h-3.5" />
+                            Call
+                          </button>
+                          <button
+                            class="h-9 px-3 text-xs rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-1 flex-1 sm:flex-none justify-center"
                             @click.stop="messageContact(assignment)"
                           >
                             <MessageSquare class="w-3.5 h-3.5" />
                             Message
                           </button>
+                        </div>
+                        <div class="w-full">
                           <button
-                            class="h-9 px-3 text-xs rounded-r-lg border border-emerald-500 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 inline-flex items-center gap-1 flex-1 sm:flex-none justify-center disabled:opacity-60 disabled:cursor-not-allowed"
+                            class="h-9 px-3 text-xs rounded-lg border border-emerald-500 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 inline-flex items-center gap-1 w-full justify-center disabled:opacity-60 disabled:cursor-not-allowed basis-full"
                             :disabled="pickupInFlight[assignment.id]"
                             @click.stop="startPickupScan(assignment)"
                           >
@@ -236,13 +237,22 @@
                         </div>
                       </template>
                       <template v-else>
-                        <button
-                          class="h-9 px-3 text-xs rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-1 w-full sm:w-auto justify-center"
-                          @click.stop="messageContact(assignment)"
-                        >
-                          <MessageSquare class="w-3.5 h-3.5" />
-                          Message
-                        </button>
+                        <div class="inline-flex w-full sm:w-auto gap-2">
+                          <button
+                            class="h-9 px-3 text-xs rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-1 flex-1 sm:flex-none justify-center"
+                            @click.stop="callContact(assignment)"
+                          >
+                            <Phone class="w-3.5 h-3.5" />
+                            Call
+                          </button>
+                          <button
+                            class="h-9 px-3 text-xs rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-1 flex-1 sm:flex-none justify-center"
+                            @click.stop="messageContact(assignment)"
+                          >
+                            <MessageSquare class="w-3.5 h-3.5" />
+                            Message
+                          </button>
+                        </div>
                         <button
                           v-if="!assignment.localDelivered"
                           class="h-9 px-3 text-xs rounded-lg border border-emerald-500 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 inline-flex items-center gap-1 w-full sm:w-auto justify-center disabled:opacity-60 disabled:cursor-not-allowed"
@@ -255,7 +265,7 @@
                       </template>
                       <button
                         v-if="assignment.status !== 'in_transit' && !assignment.localPicked"
-                        class="h-9 px-3 text-xs rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 inline-flex items-center gap-1 w-full sm:w-auto justify-center disabled:opacity-60 disabled:cursor-not-allowed"
+                        class="h-9 px-3 text-xs rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 inline-flex items-center gap-1 w-full sm:w-auto justify-center disabled:opacity-60 disabled:cursor-not-allowed basis-full"
                         :disabled="pickupInFlight[assignment.id]"
                         @click.stop="markPickedUp(assignment)"
                       >
