@@ -709,6 +709,12 @@ function handleScan() {
   scannerOpen.value = true
 }
 
+function startPickupScan(assignment: AssignmentExtended) {
+  scannerAssignment.value = assignment
+  scannerMode.value = 'pickup'
+  scannerOpen.value = true
+}
+
 function handleScanResult(value: string) {
   if (!scannerAssignment.value || !scannerMode.value) {
     handleScannerClose()
