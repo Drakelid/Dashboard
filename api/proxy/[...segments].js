@@ -96,7 +96,9 @@ module.exports = async function handler(req, res) {
       upstreamOrigin = new URL(upstreamUrl).origin
     } catch {}
 
-    headers['origin'] = upstreamOrigin
+    if (!headers['origin']) {
+      headers['origin'] = upstreamOrigin
+    }
     headers['referer'] = upstreamUrl
 
     const bodyInit = (body !== undefined) ? body : undefined
