@@ -22,6 +22,8 @@ export async function login(payload: LoginRequest): Promise<User> {
   const ENV_AUTH_LOGIN_PATH = (import.meta as any).env?.VITE_AUTH_LOGIN_PATH as string | undefined
   const candidates = [
     ...(ENV_AUTH_LOGIN_PATH ? withToggle(ENV_AUTH_LOGIN_PATH) : []),
+    ...withToggle('/accounts/login/'),
+    ...withToggle('/_allauth/browser/v1/login/'),
     ...withToggle('/api/auth/login/'),
     ...withToggle('/dashboard/api/auth/login/'),
     ...withToggle('/auth/login/'),
@@ -33,6 +35,8 @@ export async function logout(): Promise<{ detail: string } | Record<string, unkn
   const ENV_AUTH_LOGOUT_PATH = (import.meta as any).env?.VITE_AUTH_LOGOUT_PATH as string | undefined
   const candidates = [
     ...(ENV_AUTH_LOGOUT_PATH ? withToggle(ENV_AUTH_LOGOUT_PATH) : []),
+    ...withToggle('/accounts/logout/'),
+    ...withToggle('/_allauth/browser/v1/logout/'),
     ...withToggle('/api/auth/logout/'),
     ...withToggle('/dashboard/api/auth/logout/'),
     ...withToggle('/auth/logout/'),

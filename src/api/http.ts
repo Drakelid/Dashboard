@@ -153,6 +153,8 @@ export async function primeCsrf(): Promise<void> {
     '/auth/csrf/',
     '/csrf/',
     '/sanctum/csrf-cookie',
+    '/accounts/login/',
+    '/_allauth/browser/v1/csrf/',
     '/api/',
   ]
   for (const p of candidates) {
