@@ -131,7 +131,11 @@ export type PackageStatusUpdateRequest = {
   picked_up_at?: string
 }
 
-export interface LoginRequest { email: string; password: string }
+export interface LoginRequest {
+  email: string
+  password: string
+  login?: string
+}
 export interface SignupRequest {
   email: string
   password1: string

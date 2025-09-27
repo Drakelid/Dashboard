@@ -1,0 +1,96 @@
+# Frontend Implementation Guide for Cookie-Based Auth with the Carma Backend
+
+Assumptions: the frontend is served from `https://app.example-frontend.com`, the Django backend from `https://backend.example.com`, and the backend is configured per `carma/settings.py` with the required CORS, CSRF, and cookie attributes.
+
+## 1. Project configuration
+- **Environment variables**: expose the backend URL and the CSRF safe methods in your frontend build system (e.g. Vite `env` file).
+  ```env
+  VITE_API_BASE_URL=https://backend.example.com
+  VITE_SAFE_HTTP_METHODS=GET,HEAD,OPTIONS
+  ```
+- **HTTP client defaults**: whether you use `fetch`, Axios, or another client, enable credentialed requests globally.
+  ```ts
+  // axios example
+  import axios from "axios";
+
+  export const api = axios.create({
+    baseURL: import.meta.env.VITE_API_BASE_URL,
+    withCredentials: true,
+  });
+  ```
+
+## 2. CSRF bootstrap
+1. **Fetch CSRF cookie**
+   - Issue a credentialed `GET` request to an endpoint that sets CSRF cookies (e.g. `/accounts/login/` or `/_allauth/browser/v1/csrf/`).
+   - Example using `fetch`:
+     ```ts
+     await fetch(`${apiBase}/accounts/login/`, {
+       method: "GET",
+       credentials: "include",
+       mode: "cors",
+     });
+     ```
+2. **Extract token**
+   - In the browser, read `csrftoken` from `document.cookie`.
+   - In a headless runtime (Node), parse the `set-cookie` header and store the value in your cookie jar.
+3. **Attach token helper**
+   - Wrap state-changing requests to automatically set the `X-CSRFToken` header.
+     ```ts
+     const safeMethods = new Set((import.meta.env.VITE_SAFE_HTTP_METHODS ?? "GET,HEAD,OPTIONS").split(","));
+
+     function csrfHeader(opts: RequestInit = {}): RequestInit {
+       const isSafe = opts.method && safeMethods.has(opts.method.toUpperCase());
+       if (!isSafe) {
+         const token = getCookieValue("csrftoken");
+         if (!token) throw new Error("Missing CSRF token; call bootstrapCsrf() first.");
+         opts.headers = { ...(opts.headers || {}), "X-CSRFToken": token };
+       }
+       return opts;
+     }
+     ```
+
+## 3. Login flow
+1. Call `bootstrapCsrf()` to guarantee the CSRF cookie exists.
+2. POST credentials to the Allauth login endpoint with credentials included and the `X-CSRFToken` header set.
+   ```ts
+   await fetch(`${apiBase}/accounts/login/`, csrfHeader({
+     method: "POST",
+     credentials: "include",
+     headers: { "Content-Type": "application/json" },
+     body: JSON.stringify({ login: email, password }),
+   }));
+   ```
+3. On `200 OK`, the browser stores `sessionid` automatically. No manual token handling is required beyond maintaining cookies.
+4. Optionally call `/_allauth/browser/v1/session/` to obtain the serialized user payload defined in `apps.users.adapter.CustomHeadlessAdapter`.
+
+## 4. Authenticated API usage
+- For every subsequent request, keep `credentials: "include"` (or `withCredentials: true`).
+- Wrap requests with `csrfHeader` for non-safe methods.
+- Example for a DRF endpoint that mutates state:
+  ```ts
+  await fetch(`${apiBase}/deliveries/package/${packageId}/assign/`, csrfHeader({
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ driver_id }),
+  }));
+  ```
+
+## 5. Session management
+- **Keep-alive**: invoke a lightweight authenticated endpoint periodically to prevent session timeout if required.
+- **Logout**: POST to `/accounts/logout/` with `credentials: "include"` and the CSRF header.
+  ```ts
+  await fetch(`${apiBase}/accounts/logout/`, csrfHeader({
+    method: "POST",
+    credentials: "include",
+  }));
+  ```
+- **Session check**: poll `/_allauth/browser/v1/session/` to verify whether the user is still authenticated and refresh UI state accordingly.
+
+## 6. Troubleshooting & QA
+- **403 Forbidden** usually means missing/invalid CSRF token or the backend `CSRF_TRUSTED_ORIGINS`/`CORS_ALLOWED_ORIGINS` lacks the frontend domain.
+- **Blocked cookies**: confirm in browser dev tools that cookies carry `Domain=.example.com`, `Secure`, and `SameSite=None`.
+- **Local development**: align the dev server origin with `FRONTEND_ADDRESS` in `.env`; if ports differ (`vite.config.ts` uses `5173` while `settings.py` defaults to `5174`), update one side to match before testing.
+- **HTTPS**: browsers reject cross-site cookies without HTTPS when `SameSite=None`. Use HTTPS even in staging.
+
+Follow these steps to implement cookie-based authentication seamlessly between the Carma Django backend and a separate frontend domain.

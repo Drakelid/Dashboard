@@ -76,6 +76,11 @@ async function login(payload: LoginRequest, opts?: { mode?: 'cookie' | 'basic' |
   loading.value = true
   error.value = null
   try {
+    const normalizedPayload: LoginRequest = {
+      email: payload.email,
+      password: payload.password,
+      login: payload.login ?? payload.email,
+    }
     // Force cookie mode only when not explicitly using Basic
     if (forceCookie) {
       setDefaultAuth(undefined)
@@ -83,7 +88,7 @@ async function login(payload: LoginRequest, opts?: { mode?: 'cookie' | 'basic' |
       while (cookieRetry < 2) {
         await primeCsrf().catch(() => {})
         try {
-          const u = await apiLogin(payload)
+          const u = await apiLogin(normalizedPayload)
           setDefaultAuth(undefined)
           user.value = u
           driver.value = await apiGetProfile().catch(() => null)
@@ -161,7 +166,7 @@ async function login(payload: LoginRequest, opts?: { mode?: 'cookie' | 'basic' |
 
     // Cookie mode (or auto after failing basic-first)
     await primeCsrf().catch(() => {})
-    const u = await apiLogin(payload)
+    const u = await apiLogin(normalizedPayload)
     setDefaultAuth(undefined)
     user.value = u
     driver.value = await apiGetProfile().catch(() => null)
