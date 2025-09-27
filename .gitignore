@@ -7,3 +7,5 @@ node_modules
 /tests/*
 tests/*
 tests
+cookie-instructions.txt
+cookies.txt

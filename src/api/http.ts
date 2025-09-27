@@ -176,6 +176,11 @@ function maybeAttachCsrf(method: HttpMethod, headers: Record<string, string>) {
   if (!('X-CSRF-Token' in headers)) headers['X-CSRF-Token'] = token
   if (!('X-XSRF-TOKEN' in headers)) headers['X-XSRF-TOKEN'] = token
   if (!('X-XSRFToken' in headers)) headers['X-XSRFToken'] = token
+  if (typeof window !== 'undefined') {
+    // Surface whether we attached CSRF headers to aid debugging in hosted environments
+    const attached = ['X-CSRFToken', 'X-CSRF-Token', 'X-XSRF-TOKEN', 'X-XSRFToken'].filter((key) => key in headers)
+    console.debug('[http] attached CSRF headers', attached)
+  }
 }
 
 async function parseBody<T>(res: Response): Promise<T | undefined> {
