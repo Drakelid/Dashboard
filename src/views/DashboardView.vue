@@ -4,25 +4,28 @@
       <Spinner />
     </div>
     <!-- Welcome / Summary Banner -->
-    <div class="relative z-0 overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-900 via-emerald-800 to-teal-700 p-6 text-white shadow-xl">
+    <div
+      class="relative z-0 overflow-hidden rounded-2xl p-6 text-white shadow-xl"
+      style="background: linear-gradient(135deg, #022c22 0%, #065f46 45%, #0891b2 100%);"
+    >
       <div class="relative z-0 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 class="text-2xl md:text-3xl font-bold mb-1 text-white">{{ greeting }}</h1>
-          <p class="text-emerald-50 text-sm md:text-base">
+          <h1 class="text-2xl md:text-3xl font-bold mb-1 text-white drop-shadow">{{ greeting }}</h1>
+          <p class="text-teal-100/90 text-sm md:text-base">
             You have {{ quickStats.activeDeliveries }} active deliveries. Next pickup in {{ quickStats.nextDeliveryLabel }}.
           </p>
           <div class="flex items-center flex-wrap gap-3 mt-3 text-sm">
-            <span class="px-2 py-1 rounded-lg bg-white/20 border border-white/30">Eco Score: <b>{{ quickStats.ecoScoreLabel }}</b></span>
-            <span class="opacity-90">Today: <b>{{ quickStats.todayEarningsLabel }}</b></span>
-            <span class="opacity-90">Standard fee: <b>{{ quickStats.deliveryFeeLabel }}</b></span>
+            <span class="px-2 py-1 rounded-lg bg-white/15 border border-white/30 text-white/90">Eco Score: <b>{{ quickStats.ecoScoreLabel }}</b></span>
+            <span class="text-white/80">Today: <b>{{ quickStats.todayEarningsLabel }}</b></span>
+            <span class="text-white/80">Standard fee: <b>{{ quickStats.deliveryFeeLabel }}</b></span>
           </div>
         </div>
         <div class="flex flex-wrap gap-3">
-          <button class="px-3 py-2 tap-target rounded-lg bg-white/15 hover:bg-white/25 border border-white/30 inline-flex items-center gap-2 text-white">
+          <button class="px-3 py-2 tap-target rounded-lg bg-white/10 hover:bg-white/20 border border-white/30 inline-flex items-center gap-2 text-white">
             <Map class="w-4 h-4" />
             <span>View Route</span>
           </button>
-          <button class="px-3 py-2 tap-target rounded-lg bg-white text-emerald-700 hover:bg-emerald-100/90 inline-flex items-center gap-2">
+          <button class="px-3 py-2 tap-target rounded-lg bg-white text-emerald-800 hover:bg-emerald-100/90 inline-flex items-center gap-2">
             <Play class="w-4 h-4" />
             <span>Start Next</span>
           </button>
