@@ -28,7 +28,7 @@
           </div>
           <span
             v-if="badgeValue(item) !== null"
-            class="ml-auto inline-flex items-center justify-center h-6 min-w-[1.5rem] px-2 rounded-full text-xs bg-green-100 text-green-700"
+            class="ml-auto inline-flex items-center justify-center h-6 min-w-[1.5rem] px-2 rounded-full text-xs bg-emerald-100 text-emerald-700"
           >
             {{ badgeValue(item) }}
           </span>
@@ -60,14 +60,14 @@ const navSections = navigationSections
 
 function isActive(path: string) {
   const active = path === '/' ? route.path === '/' : (route.path === path || route.path.startsWith(path + '/'))
-  return active ? 'bg-green-600/10 ring-2 ring-green-300 text-green-800' : 'hover:bg-gray-50'
+  return active ? 'bg-emerald-600/10 ring-2 ring-emerald-300 text-emerald-800' : 'hover:bg-slate-50'
 }
 
 function iconClass(path: string) {
   const active = path === '/' ? route.path === '/' : (route.path === path || route.path.startsWith(path + '/'))
   return active
-    ? 'bg-green-100 text-green-700 ring-1 ring-green-200'
-    : 'bg-gray-100 text-gray-700 group-hover:bg-gray-200 group-hover:text-gray-900'
+    ? 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200'
+    : 'bg-slate-100 text-slate-700 group-hover:bg-slate-200 group-hover:text-slate-900'
 }
 
 const logoSrc = new URL('../../logo.png', import.meta.url).href

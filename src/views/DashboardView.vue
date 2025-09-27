@@ -1,14 +1,13 @@
-<template>
   <section class="relative z-0 space-y-6 pb-10">
     <div v-if="isLoading" class="absolute inset-0 z-10 bg-white/70 grid place-items-center">
       <Spinner />
     </div>
     <!-- Welcome / Summary Banner -->
-    <div class="relative z-0 overflow-hidden rounded-2xl bg-gradient-to-r from-green-600 via-green-700 to-green-800 p-6 text-white">
+    <div class="relative z-0 overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 p-6 text-white">
       <div class="relative z-0 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 class="text-2xl md:text-3xl font-bold mb-1">{{ greeting }}</h1>
-          <p class="text-green-100 text-sm md:text-base">
+          <p class="text-emerald-100 text-sm md:text-base">
             You have {{ quickStats.activeDeliveries }} active deliveries. Next pickup in {{ quickStats.nextDeliveryLabel }}.
           </p>
           <div class="flex items-center flex-wrap gap-3 mt-3 text-sm">
@@ -22,7 +21,7 @@
             <Map class="w-4 h-4" />
             <span>View Route</span>
           </button>
-          <button class="px-3 py-2 tap-target rounded-lg bg-white text-green-700 hover:bg-green-50 inline-flex items-center gap-2">
+          <button class="px-3 py-2 tap-target rounded-lg bg-white text-emerald-700 hover:bg-emerald-50 inline-flex items-center gap-2">
             <Play class="w-4 h-4" />
             <span>Start Next</span>
           </button>
@@ -33,48 +32,13 @@
     <div v-if="errorMessage" class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
       {{ errorMessage }}
     </div>
-    <!-- Quick Stats -->
-    <OverviewCards :stats="overviewCardStats" />
-
-    <!-- Tabs -->
-    <div class="space-y-6">
-      <!-- Tabs List -->
-      <div class="relative z-30 isolate grid w-full grid-cols-2 sm:grid-cols-4 bg-gray-100 p-1 rounded-lg pointer-events-auto">
-        <button 
-          @click="tab = 'overview'" 
-          :class="['px-3 py-2 tap-target rounded-md text-sm font-medium transition-colors', tab === 'overview' ? 'bg-white shadow text-blue-600' : 'text-gray-600 hover:text-gray-900']"
-        >
-          Overview
-        </button>
-        <button 
-          @click="tab = 'analytics'" 
-          :class="['px-3 py-2 tap-target rounded-md text-sm font-medium transition-colors', tab === 'analytics' ? 'bg-white shadow text-blue-600' : 'text-gray-600 hover:text-gray-900']"
-        >
-          Analytics
-        </button>
-        <button 
-          @click="tab = 'tasks'" 
-          :class="['px-3 py-2 tap-target rounded-md text-sm font-medium transition-colors', tab === 'tasks' ? 'bg-white shadow text-blue-600' : 'text-gray-600 hover:text-gray-900']"
-        >
-          Tasks
-        </button>
-        <button 
-          @click="tab = 'achievements'" 
-          :class="['px-3 py-2 tap-target rounded-md text-sm font-medium transition-colors', tab === 'achievements' ? 'bg-white shadow text-blue-600' : 'text-gray-600 hover:text-gray-900']"
-        >
-          Achievements
-        </button>
-      </div>
-
-      <!-- Overview -->
-      <div v-if="tab === 'overview'" class="space-y-6">
-        <!-- Main Grid -->
+{{ ... }}
         <div class="grid gap-6 lg:grid-cols-3">
           <!-- Active Deliveries -->
           <div class="lg:col-span-2 space-y-3">
             <div class="flex items-center justify-between">
               <h3 class="text-lg font-semibold flex items-center gap-2">
-                <span class="inline-block h-5 w-5 rounded-full bg-blue-100 ring-2 ring-blue-200 grid place-items-center text-blue-600">
+                <span class="inline-block h-5 w-5 rounded-full bg-emerald-100 ring-2 ring-emerald-200 grid place-items-center text-emerald-600">
                   <Info class="w-3.5 h-3.5" />
                 </span>
                 Active Eco-Deliveries
@@ -85,6 +49,7 @@
               variant="plain"
               :tasks="upcomingTasks"
               empty-text="No upcoming deliveries."
+{{ ... }}
               @navigate="handleNavigate"
             />
           </div>
@@ -118,18 +83,18 @@
             v-for="(ach, i) in achievements"
             :key="ach.title"
             class="p-4 rounded-lg border bg-white"
-            :class="ach.earned ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50'"
+            :class="ach.earned ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-slate-50'"
           >
             <div class="flex items-center justify-between mb-2">
               <div>
                 <div class="font-medium">{{ ach.title }}</div>
                 <div class="text-sm text-gray-500">{{ ach.description }}</div>
               </div>
-              <div v-if="ach.earned" class="text-green-600 text-sm font-medium">Earned</div>
+              <div v-if="ach.earned" class="text-emerald-600 text-sm font-medium">Earned</div>
               <div v-else class="text-gray-500 text-sm font-medium">{{ ach.progress }}%</div>
             </div>
-            <div v-if="!ach.earned" class="h-2 w-full rounded-full bg-gray-100">
-              <div class="h-2 rounded-full bg-green-500" :style="{ width: (ach.progress || 0) + '%' }"></div>
+            <div v-if="!ach.earned" class="h-2 w-full rounded-full bg-slate-100">
+              <div class="h-2 rounded-full bg-emerald-500" :style="{ width: (ach.progress || 0) + '%' }"></div>
             </div>
           </div>
         </div>

@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <component :is="variantTag" :class="containerClasses">
     <header v-if="title" class="flex items-center justify-between mb-3">
       <div>
@@ -24,10 +24,10 @@
             <span class="px-2 py-0.5 rounded bg-black/5 capitalize">{{ task.priority }}</span>
             <span class="font-medium">{{ task.id }}</span>
             <span class="text-gray-500">{{ task.type }}</span>
-            <span v-if="task.ecoFriendly" class="px-2 py-0.5 rounded bg-green-100 text-green-800 text-xs">Eco</span>
+            <span v-if="task.ecoFriendly" class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-xs">Eco</span>
           </div>
           <div class="flex items-center gap-3 text-sm">
-            <span class="font-medium text-green-600">{{ task.earnings }}</span>
+            <span class="font-medium text-emerald-600">{{ task.earnings }}</span>
             <span class="font-medium">{{ task.time }}</span>
           </div>
         </div>

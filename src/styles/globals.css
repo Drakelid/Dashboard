@@ -8,14 +8,21 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: #1e40af;
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.95 0.0058 264.53);
-  --secondary-foreground: #030213;
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
-  --accent: #e2e8f0;
-  --accent-foreground: #030213;
+  --brand-primary: #059669;
+  --brand-primary-strong: #047857;
+  --brand-primary-soft: #34d399;
+  --brand-secondary: #6366f1;
+  --brand-secondary-soft: #e0e7ff;
+  --brand-neutral: #f1f5f9;
+  --brand-neutral-strong: #475569;
+  --primary: var(--brand-primary);
+  --primary-foreground: #ffffff;
+  --secondary: var(--brand-secondary-soft);
+  --secondary-foreground: var(--brand-secondary);
+  --muted: var(--brand-neutral);
+  --muted-foreground: var(--brand-neutral-strong);
+  --accent: #ccfbf1;
+  --accent-foreground: #115e59;
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
   --border: rgba(0, 0, 0, 0.08);
@@ -24,21 +31,21 @@
   --switch-background: #cbd5e1;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
+  --ring: #99f6e4;
+  --chart-1: #059669;
+  --chart-2: #0ea5e9;
+  --chart-3: #6366f1;
+  --chart-4: #f97316;
+  --chart-5: #facc15;
   --radius: 0.75rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: #1e40af;
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: #f8fafc;
+  --sidebar-foreground: #0f172a;
+  --sidebar-primary: var(--brand-primary);
+  --sidebar-primary-foreground: #f8fafc;
+  --sidebar-accent: #ecfeff;
+  --sidebar-accent-foreground: #0f172a;
+  --sidebar-border: #e2e8f0;
+  --sidebar-ring: #99f6e4;
   
   /* Enhanced animation variables */
   --animation-duration-fast: 0.15s;
@@ -482,9 +489,9 @@
   
   /* Enhanced gradients */
   .gradient-primary {
-    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    background: linear-gradient(135deg, #2dd4bf, #047857);
   }
-  
+
   .gradient-success {
     background: linear-gradient(135deg, #10b981, #059669);
   }
@@ -498,8 +505,8 @@
   }
   
   .gradient-card {
-    background: linear-gradient(135deg, #ffffff, #f8fafc);
-    border: 1px solid rgba(0, 0, 0, 0.05);
+    background: linear-gradient(135deg, #ffffff, #f1f5f9);
+    border: 1px solid rgba(15, 23, 42, 0.05);
   }
   
   /* Utility classes */
@@ -626,9 +633,9 @@ html {
 
 /* Enhanced navigation styles */
 .nav-active {
-  background: linear-gradient(135deg, #3b82f6, #10b981);
+  background: linear-gradient(135deg, var(--brand-primary), #2dd4bf);
   color: white;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3);
 }
 
 .nav-item {
@@ -637,7 +644,7 @@ html {
 
 .nav-item:hover {
   transform: translateX(4px);
-  background-color: rgba(59, 130, 246, 0.05);
+  background-color: rgba(45, 212, 191, 0.08);
 }
 
 .custom-scrollbar::-webkit-scrollbar {
@@ -659,25 +666,25 @@ html {
 
 /* Enhanced button interactions */
 .btn-primary {
-  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-strong));
   transition: all 0.2s ease;
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, #2563eb, #1e40af);
+  background: linear-gradient(135deg, #10b981, var(--brand-primary-strong));
   transform: translateY(-1px);
-  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 8px 25px rgba(13, 148, 136, 0.3);
 }
 
 .btn-success {
-  background: linear-gradient(135deg, #10b981, #059669);
+  background: linear-gradient(135deg, #2dd4bf, var(--brand-primary));
   transition: all 0.2s ease;
 }
 
 .btn-success:hover {
-  background: linear-gradient(135deg, #0d9488, #047857);
+  background: linear-gradient(135deg, #14b8a6, #047857);
   transform: translateY(-1px);
-  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+  box-shadow: 0 8px 25px rgba(20, 184, 166, 0.3);
 }
 
 /* High contrast mode support */

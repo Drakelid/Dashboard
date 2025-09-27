@@ -2,7 +2,7 @@
   <section class="rounded-xl border bg-white shadow-sm">
     <header class="p-4 border-b">
       <h3 class="text-lg font-semibold flex items-center gap-2">
-        <span class="inline-block h-4 w-4 rounded-full bg-green-500" />
+        <span class="inline-block h-4 w-4 rounded-full bg-emerald-500" />
         Delivery History
       </h3>
       <p class="text-sm text-gray-500">
@@ -23,12 +23,12 @@
         >
           <div class="flex items-center justify-between gap-3">
             <div class="flex items-center gap-3">
-              <span class="inline-block h-4 w-4 rounded-full bg-green-500" />
+              <span class="inline-block h-4 w-4 rounded-full bg-emerald-500" />
               <span class="font-medium text-sm">#{{ delivery.id }}</span>
               <span class="px-2 py-0.5 rounded text-xs" :class="delivery.statusClass">
                 {{ delivery.statusLabel }}
               </span>
-              <span v-if="delivery.ecoFriendly" class="px-2 py-0.5 rounded text-xs bg-green-100 text-green-800">
+              <span v-if="delivery.ecoFriendly" class="px-2 py-0.5 rounded text-xs bg-emerald-100 text-emerald-800">
                 Eco
               </span>
             </div>
@@ -157,7 +157,7 @@ function mapDelivery(item: DriverDeliveryItem, index: number): HistoryRow {
   return {
     id: String(identifier),
     statusLabel: item.is_delivered ? 'Delivered' : 'In progress',
-    statusClass: item.is_delivered ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800',
+    statusClass: item.is_delivered ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800',
     ecoFriendly: packageMeta.ecoFriendly,
     completedAt: item.is_delivered
       ? formatDate(delivery?.delivery_date || item.date, delivery?.delivery_time || item.time)

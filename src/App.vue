@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-green-50/20">
+  <div class="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/40 to-cyan-50/30">
     <DevAuthModeBanner v-if="isDev" />
     <div class="flex">
       <!-- Sidebar -->
@@ -23,7 +23,7 @@
               </div>
             </div>
             <div class="hidden md:flex items-center gap-2 ml-auto">
-              <span class="px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs">Online</span>
+              <span class="px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs">Online</span>
               <button class="relative h-9 w-9 tap-target rounded-full border bg-white hover:bg-gray-50">
                 <Bell class="w-4 h-4 text-gray-700" />
                 <span class="absolute -top-1 -right-1 h-5 min-w-[1.25rem] px-1 rounded-full bg-red-500 text-white text-xs grid place-items-center">3</span>
