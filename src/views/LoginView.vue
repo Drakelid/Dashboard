@@ -91,6 +91,12 @@ const csrfPanel = ref<HTMLElement | null>(null)
 const defaultBasicFirst = ((import.meta as any).env?.VITE_LOGIN_BASIC_FIRST ?? '').toString().toLowerCase() === 'true' || ((import.meta as any).env?.VITE_LOGIN_BASIC_FIRST ?? '').toString() === '1'
 const mode = ref<'cookie' | 'basic'>(defaultBasicFirst ? 'basic' : 'cookie')
 
+watch(mode, async (next, prev) => {
+  if (next === 'cookie' && next !== prev) {
+    await primeCsrf().catch(() => {})
+  }
+})
+
 function goHome() {
   const redirect = (route.query.redirect as string) || '/'
   router.replace(redirect)
@@ -107,6 +113,11 @@ onMounted(async () => {
   if (apiKey) {
     await bootstrapFromApi().catch(() => {})
     goHome()
+    return
+  }
+
+  if (mode.value === 'cookie') {
+    await primeCsrf().catch(() => {})
   }
 })
 
