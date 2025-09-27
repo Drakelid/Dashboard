@@ -1,8 +1,9 @@
 const IS_DEV = (import.meta as any).env?.DEV
-// Prefer VITE_API_BASE_URL, otherwise fall back to VITE_API_TARGET for direct calls
+const DEFAULT_PROD_API_BASE_URL = 'https://test.sambring.no'
+// Prefer VITE_API_BASE_URL, otherwise fall back to VITE_API_TARGET or default Django host for direct calls
 export const API_BASE_URL = IS_DEV
   ? ''
-  : (((import.meta as any).env?.VITE_API_BASE_URL || (import.meta as any).env?.VITE_API_TARGET) || '')
+  : (((import.meta as any).env?.VITE_API_BASE_URL || (import.meta as any).env?.VITE_API_TARGET) || DEFAULT_PROD_API_BASE_URL)
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 
