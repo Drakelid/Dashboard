@@ -235,7 +235,22 @@ async function request<T>(method: HttpMethod, path: string, body?: any, opts: Re
   const wantsProxyRouting = forceProxyEnv || routingPref === 'proxy'
   const wantsDirectRouting = routingPref === 'direct'
   let routingOverride: 'proxy' | 'direct' | undefined
-  if (wantsProxyRouting) routingOverride = 'proxy'
+
+  const shouldForceProxyForCookies = (() => {
+    if (typeof window === 'undefined') return false
+    if (init.credentials !== 'include') return false
+    try {
+      if (!API_BASE_URL) return false
+      const apiHost = new URL(API_BASE_URL).hostname
+      const currentHost = window.location.hostname
+      return apiHost && currentHost && apiHost !== currentHost
+    } catch {
+      return false
+    }
+  })()
+
+  if (shouldForceProxyForCookies) routingOverride = 'proxy'
+  else if (wantsProxyRouting) routingOverride = 'proxy'
   else if (hasAuthHeader && !wantsProxyRouting && !forceProxyEnv) routingOverride = 'direct'
   else if (wantsDirectRouting) routingOverride = 'direct'
   else routingOverride = undefined
