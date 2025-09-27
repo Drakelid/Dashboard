@@ -27,13 +27,46 @@
             <span>Start Next</span>
           </button>
         </div>
-      </div>
     </div>
 
     <div v-if="errorMessage" class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
       {{ errorMessage }}
     </div>
-{{ ... }}
+    
+    <OverviewCards :stats="overviewCardStats" />
+
+    <!-- Tabs -->
+    <div class="space-y-6">
+      <!-- Tabs List -->
+      <div class="relative z-30 isolate grid w-full grid-cols-2 sm:grid-cols-4 bg-slate-100 p-1 rounded-lg pointer-events-auto">
+        <button
+          @click="tab = 'overview'"
+          :class="['px-3 py-2 tap-target rounded-md text-sm font-medium transition-colors', tab === 'overview' ? 'bg-white shadow text-emerald-600' : 'text-slate-600 hover:text-slate-900']"
+        >
+          Overview
+        </button>
+        <button
+          @click="tab = 'analytics'"
+          :class="['px-3 py-2 tap-target rounded-md text-sm font-medium transition-colors', tab === 'analytics' ? 'bg-white shadow text-emerald-600' : 'text-slate-600 hover:text-slate-900']"
+        >
+          Analytics
+        </button>
+        <button
+          @click="tab = 'tasks'"
+          :class="['px-3 py-2 tap-target rounded-md text-sm font-medium transition-colors', tab === 'tasks' ? 'bg-white shadow text-emerald-600' : 'text-slate-600 hover:text-slate-900']"
+        >
+          Tasks
+        </button>
+        <button
+          @click="tab = 'achievements'"
+          :class="['px-3 py-2 tap-target rounded-md text-sm font-medium transition-colors', tab === 'achievements' ? 'bg-white shadow text-emerald-600' : 'text-slate-600 hover:text-slate-900']"
+        >
+          Achievements
+        </button>
+      </div>
+
+      <!-- Overview -->
+      <div v-if="tab === 'overview'" class="space-y-6">
         <div class="grid gap-6 lg:grid-cols-3">
           <!-- Active Deliveries -->
           <div class="lg:col-span-2 space-y-3">
@@ -50,7 +83,6 @@
               variant="plain"
               :tasks="upcomingTasks"
               empty-text="No upcoming deliveries."
-{{ ... }}
               @navigate="handleNavigate"
             />
           </div>
