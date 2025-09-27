@@ -3,3 +3,7 @@ node_modules
 
 .env.local
 .env
+./tests/*
+/tests/*
+tests/*
+tests
