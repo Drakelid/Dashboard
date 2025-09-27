@@ -91,8 +91,13 @@ module.exports = async function handler(req, res) {
       else headers[lower] = String(value)
     }
 
-    headers['origin'] = TARGET
-    headers['referer'] = TARGET
+    let upstreamOrigin = TARGET
+    try {
+      upstreamOrigin = new URL(upstreamUrl).origin
+    } catch {}
+
+    headers['origin'] = upstreamOrigin
+    headers['referer'] = upstreamUrl
 
     const bodyInit = (body !== undefined) ? body : undefined
     const upstreamRes = await fetch(upstreamUrl, {
