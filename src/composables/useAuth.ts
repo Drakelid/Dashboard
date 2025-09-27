@@ -78,34 +78,44 @@ async function login(payload: LoginRequest, opts?: { mode?: 'cookie' | 'basic' |
   try {
     // Force cookie mode only when not explicitly using Basic
     if (forceCookie) {
-      try {
+      setDefaultAuth(undefined)
+      let cookieRetry = 0
+      while (cookieRetry < 2) {
         await primeCsrf().catch(() => {})
-        const u = await apiLogin(payload)
-        setDefaultAuth(undefined)
-        user.value = u
-        driver.value = await apiGetProfile().catch(() => null)
-        vehicle.value = await apiGetVehicle().catch(() => driver.value?.vehicle || null)
-        saveToSession()
-        return u
-      } catch (e: any) {
-        // If the session login endpoint is missing (404), fall back to Basic auth automatically
-        if (e?.status === 404) {
-          try {
-            const driverProfile: Driver = await apiGetProfile({
-              auth: { basic: { username: payload.email, password: payload.password } },
-            })
-            const u = driverProfile.user
-            user.value = u
-            driver.value = driverProfile
-            vehicle.value = driverProfile.vehicle || (await apiGetVehicle({ auth: { basic: { username: payload.email, password: payload.password } } }).catch(() => null))
-            setDefaultAuth({ basic: { username: payload.email, password: payload.password } })
-            saveToSession()
-            return u
-          } catch (inner) {
-            throw e
+        try {
+          const u = await apiLogin(payload)
+          setDefaultAuth(undefined)
+          user.value = u
+          driver.value = await apiGetProfile().catch(() => null)
+          vehicle.value = await apiGetVehicle().catch(() => driver.value?.vehicle || null)
+          saveToSession()
+          return u
+        } catch (e: any) {
+          if (e?.status === 404) {
+            try {
+              const driverProfile: Driver = await apiGetProfile({
+                auth: { basic: { username: payload.email, password: payload.password } },
+              })
+              const u = driverProfile.user
+              user.value = u
+              driver.value = driverProfile
+              vehicle.value = driverProfile.vehicle || (await apiGetVehicle({ auth: { basic: { username: payload.email, password: payload.password } } }).catch(() => null))
+              setDefaultAuth({ basic: { username: payload.email, password: payload.password } })
+              saveToSession()
+              return u
+            } catch (inner) {
+              throw e
+            }
           }
+
+          if ((e?.status === 401 || e?.status === 403) && cookieRetry === 0) {
+            // Re-prime CSRF and retry once more before surfacing the failure
+            cookieRetry += 1
+            continue
+          }
+
+          throw e
         }
-        throw e
       }
     }
 

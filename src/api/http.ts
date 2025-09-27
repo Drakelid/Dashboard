@@ -157,7 +157,7 @@ export async function primeCsrf(): Promise<void> {
   ]
   for (const p of candidates) {
     try {
-      const url = buildUrl(p)
+      const url = buildUrl(p, undefined, 'proxy')
       await fetch(url, { method: 'GET', credentials: 'include' })
       if (hasCsrfCookie()) return
     } catch {
