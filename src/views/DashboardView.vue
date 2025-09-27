@@ -25,7 +25,7 @@
             <Map class="w-4 h-4" />
             <span>View Route</span>
           </button>
-          <button class="px-3 py-2 tap-target rounded-lg bg-white text-emerald-800 hover:bg-emerald-100/90 inline-flex items-center gap-2">
+          <button class="px-3 py-2 tap-target rounded-lg bg-gradient-to-r from-emerald-400 to-teal-500 text-white hover:from-emerald-300 hover:to-teal-400 border border-white/20 inline-flex items-center gap-2">
             <Play class="w-4 h-4" />
             <span>Start Next</span>
           </button>
