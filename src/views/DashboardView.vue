@@ -1,3 +1,4 @@
+<template>
   <section class="relative z-0 space-y-6 pb-10">
     <div v-if="isLoading" class="absolute inset-0 z-10 bg-white/70 grid place-items-center">
       <Spinner />
